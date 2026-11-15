@@ -1,5 +1,6 @@
 #include "Application.hpp"
 
+#include "Core/Logger.hpp"
 #include "Platform/Window/Window.hpp"
 
 #include <glad/gl.h>
@@ -7,8 +8,8 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-#include <iostream>
 #include <stdexcept>
+#include <string>
 
 void Application::Run()
 {
@@ -16,16 +17,13 @@ void Application::Run()
 
     if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress))
     {
+        Logger::Error("Failed to initialize GLAD");
         throw std::runtime_error("Failed to initialize GLAD");
     }
 
-    std::cout << "OpenGL initialized successfully\n";
-
-    std::cout << "Version: "
-              << glGetString(GL_VERSION) << '\n';
-
-    std::cout << "Renderer: "
-              << glGetString(GL_RENDERER) << '\n';
+    Logger::Info("OpenGL initialized successfully");
+    Logger::Info(std::string("Version: ") + reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+    Logger::Info(std::string("Renderer: ") + reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
     glViewport(0, 0, 1280, 720);
 

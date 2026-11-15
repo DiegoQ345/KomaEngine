@@ -1,11 +1,14 @@
 #include "Window.hpp"
 
+#include "Core/Logger.hpp"
+
 #include <stdexcept>
 
 Window::Window(int width, int height, const char* title)
 {
     if (!glfwInit())
     {
+        Logger::Error("Failed to initialize GLFW");
         throw std::runtime_error("Failed to initialize GLFW");
     }
 
@@ -25,6 +28,7 @@ Window::Window(int width, int height, const char* title)
     if (!m_Window)
     {
         glfwTerminate();
+        Logger::Error("Failed to create GLFW window");
         throw std::runtime_error("Failed to create GLFW window");
     }
 

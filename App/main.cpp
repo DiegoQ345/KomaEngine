@@ -1,7 +1,9 @@
-#include <iostream>
 #include <exception>
 
 #include "Core/Application.hpp"
+#include "Core/Logger.hpp"
+
+#include <string>
 
 int main()
 {
@@ -12,8 +14,7 @@ int main()
     }
     catch (const std::exception& exception)
     {
-        std::cerr << "Engine error: "
-                  << exception.what() << '\n';
+        Logger::Error(std::string("Engine error: ") + exception.what());
 
         return -1;
     }
