@@ -1,0 +1,32 @@
+# Build de CMake
+/build/
+cmake-build-*/
+out/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+build.ninja
+.ninja_deps
+.ninja_log
+rules.ninja
+
+# Binarios y objetos
+*.exe
+*.dll
+*.a
+*.lib
+*.o
+*.obj
+*.pdb
+*.ilk
+
+# VS Code (config local)
+.vscode/settings.json
+.vscode/launch.json
+
+# Sistema
+Thumbs.db
+Desktop.ini
+
+# Base de datos de compilacion
+compile_commands.json
