@@ -24,9 +24,23 @@ rules.ninja
 .vscode/settings.json
 .vscode/launch.json
 
+# IDE personal
+.vs/
+.idea/
+*.user
+CMakeUserPresets.json
+
+# Temporales
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+
 # Sistema
 Thumbs.db
 Desktop.ini
+.DS_Store
 
 # Base de datos de compilacion
 compile_commands.json

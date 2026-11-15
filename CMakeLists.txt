@@ -13,4 +13,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(Engine)
-add_subdirectory(Sandbox)
+add_subdirectory(App)
+add_subdirectory(Tests)
