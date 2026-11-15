@@ -12,7 +12,7 @@ int main()
 {
     try
     {
-        Window window(1280, 720, "MyEngine - First Window");
+        Window window(1280, 720, "KomaEngine");
 
         // Initialize GLAD
         if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress))
