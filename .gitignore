@@ -30,3 +30,6 @@ Desktop.ini
 
 # Base de datos de compilacion
 compile_commands.json
+
+# Documento de especificacion (local)
+prompt.md
