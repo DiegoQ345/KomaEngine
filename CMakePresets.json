@@ -1,0 +1,41 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "windows-debug",
+            "displayName": "Windows Debug (MSYS2 UCRT64, GCC)",
+            "description": "Configuracion Debug con Ninja y toolchain UCRT64",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "G:/msys/ucrt64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "G:/msys/ucrt64/bin/g++.exe",
+                "CMAKE_PREFIX_PATH": "G:/msys/ucrt64"
+            }
+        },
+        {
+            "name": "windows-release",
+            "displayName": "Windows Release (MSYS2 UCRT64, GCC)",
+            "description": "Configuracion Release con Ninja y toolchain UCRT64",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "G:/msys/ucrt64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "G:/msys/ucrt64/bin/g++.exe",
+                "CMAKE_PREFIX_PATH": "G:/msys/ucrt64"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "windows-debug",
+            "configurePreset": "windows-debug"
+        },
+        {
+            "name": "windows-release",
+            "configurePreset": "windows-release"
+        }
+    ]
+}

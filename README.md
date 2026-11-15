@@ -22,6 +22,20 @@ Motor gráfico 3D en C++20 + OpenGL. Primera versión funcional en Windows.
 
 ## Configuración y compilación
 
+El proyecto incluye `CMakePresets.json` con dos presets (ambos Ninja + GCC UCRT64 + `CMAKE_PREFIX_PATH=G:/msys/ucrt64`), con directorios de salida independientes:
+
+```cmd
+# Debug
+cmake --preset windows-debug
+cmake --build --preset windows-debug
+
+# Release
+cmake --preset windows-release
+cmake --build --preset windows-release
+```
+
+Sin presets (equivalente manual):
+
 ```cmd
 cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH=G:/msys/ucrt64
 cmake --build build
@@ -38,7 +52,9 @@ ninja --version
 ## Ejecución
 
 ```cmd
-build\App\App.exe
+build\debug\App\App.exe     # preset windows-debug
+build\release\App\App.exe   # preset windows-release
+build\App\App.exe           # si se compila con el flujo manual
 ```
 
 Abre una ventana de 1280 × 720 con contexto OpenGL 4.6 Core, imprime por consola la versión de OpenGL y la GPU, y limpia la pantalla con azul oscuro. La ventana permanece abierta hasta cerrarla.
@@ -47,7 +63,8 @@ Abre una ventana de 1280 × 720 con contexto OpenGL 4.6 Core, imprime por consol
 
 ```text
 KomaEngine/
-├── CMakeLists.txt          # Config raíz (C99 / C++20, Ninja)
+├── CMakeLists.txt          # Config raíz (C99 / C++20)
+├── CMakePresets.json       # Presets windows-debug y windows-release
 ├── Engine/                 # Motor (biblioteca estática)
 │   ├── Core/               # Nucleo (pendiente)
 │   ├── Platform/
