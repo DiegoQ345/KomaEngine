@@ -11,6 +11,7 @@ target_include_directories(glad PUBLIC
 
 # Engine
 add_library(Engine STATIC
+    Core/Application.cpp
     Platform/Window/Window.cpp
 )
 
