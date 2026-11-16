@@ -14,6 +14,7 @@ add_library(Engine STATIC
     Core/Application.cpp
     Core/AssetPaths.cpp
     Core/Logger.cpp
+    Core/Transform.cpp
     Platform/Input/Input.cpp
     Platform/Window/Window.cpp
     Renderer/OpenGL/IndexBuffer.cpp
