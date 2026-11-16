@@ -2,10 +2,12 @@
 
 #include "Core/Logger.hpp"
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include <fstream>
 #include <sstream>
-#include <string>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace
@@ -114,4 +116,17 @@ Shader::~Shader()
 void Shader::Bind() const
 {
     glUseProgram(m_Program);
+}
+
+void Shader::SetMat4(const char* name, const glm::mat4& matrix) const
+{
+    const GLint location = glGetUniformLocation(m_Program, name);
+
+    if (location == -1)
+    {
+        Logger::Warning(std::string("SetMat4: uniform not found: ") + name);
+        return;
+    }
+
+    glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
 }

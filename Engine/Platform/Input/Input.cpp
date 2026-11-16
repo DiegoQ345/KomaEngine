@@ -22,6 +22,10 @@ namespace
             case Key::Down:   return GLFW_KEY_DOWN;
             case Key::Left:   return GLFW_KEY_LEFT;
             case Key::Right:  return GLFW_KEY_RIGHT;
+            case Key::LeftShift:    return GLFW_KEY_LEFT_SHIFT;
+            case Key::RightShift:   return GLFW_KEY_RIGHT_SHIFT;
+            case Key::LeftControl:  return GLFW_KEY_LEFT_CONTROL;
+            case Key::RightControl: return GLFW_KEY_RIGHT_CONTROL;
         }
 
         return GLFW_KEY_UNKNOWN;

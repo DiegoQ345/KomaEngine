@@ -17,9 +17,12 @@ public:
     void SwapBuffers() const;
     void Close();
 
+    void SetCursorCaptured(bool captured);
+
     GLFWwindow* GetHandle() const;
 
 private:
     GLFWwindow* m_Window = nullptr;
+    bool m_CursorCaptured = false;
 };
 

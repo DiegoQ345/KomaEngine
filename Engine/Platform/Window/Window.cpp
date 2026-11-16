@@ -38,6 +38,11 @@ Window::Window(int width, int height, const char* title)
 
 Window::~Window()
 {
+    if (m_CursorCaptured && m_Window)
+    {
+        glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
+
     if (m_Window)
     {
         glfwDestroyWindow(m_Window);
@@ -64,6 +69,16 @@ void Window::SwapBuffers() const
 void Window::Close()
 {
     glfwSetWindowShouldClose(m_Window, GLFW_TRUE);
+}
+
+void Window::SetCursorCaptured(bool captured)
+{
+    if (m_Window)
+    {
+        glfwSetInputMode(m_Window, GLFW_CURSOR, captured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+    }
+
+    m_CursorCaptured = captured;
 }
 
 GLFWwindow* Window::GetHandle() const

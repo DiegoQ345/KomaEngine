@@ -15,7 +15,11 @@ enum class Key
     Up,
     Down,
     Left,
-    Right
+    Right,
+    LeftShift,
+    RightShift,
+    LeftControl,
+    RightControl
 };
 
 enum class MouseButton

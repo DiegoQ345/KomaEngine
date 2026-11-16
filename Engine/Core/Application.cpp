@@ -3,12 +3,15 @@
 #include "Core/AssetPaths.hpp"
 #include "Core/Logger.hpp"
 #include "Platform/Input/Input.hpp"
+#include "Core/Camera.hpp"
+#include "Core/CameraController.hpp"
 #include "Platform/Window/Window.hpp"
 #include "Renderer/OpenGL/Mesh.hpp"
 #include "Renderer/OpenGL/Renderer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
 
 #include <glm/vec2.hpp>
+#include <glm/mat4x4.hpp>
 
 #include <glad/gl.h>
 
@@ -17,7 +20,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cmath>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -55,7 +57,9 @@ void Application::Run()
     Logger::Info(std::string("Version: ") + reinterpret_cast<const char*>(glGetString(GL_VERSION)));
     Logger::Info(std::string("Renderer: ") + reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
-    const auto updateViewport = [&window, this]() {
+    Camera camera;
+
+    const auto updateViewport = [&window, &camera, this]() {
         int width = 0;
         int height = 0;
         glfwGetFramebufferSize(window.GetHandle(), &width, &height);
@@ -64,6 +68,7 @@ void Application::Run()
         m_FramebufferWidth = width;
         m_FramebufferHeight = height;
         glViewport(0, 0, width, height);
+        camera.SetAspectRatio(static_cast<float>(width) / static_cast<float>(height));
     };
 
     updateViewport();
@@ -129,6 +134,7 @@ void Application::Run()
     Logger::Info("Cube created successfully");
 
     Input input(window.GetHandle());
+    CameraController cameraController(camera, input, window);
 
     auto last = std::chrono::steady_clock::now();
 
@@ -141,21 +147,25 @@ void Application::Run()
         deltaTime = std::clamp(deltaTime, 0.0f, 0.1f);
         last = now;
 
-        updateViewport();
-
         input.Update();
+        cameraController.Update(deltaTime);
+
+        updateViewport();
 
         if (input.IsKeyPressed(Key::Escape))
         {
             window.Close();
         }
 
-        Update(deltaTime, input);
+        Update(deltaTime);
 
-        renderer.SetClearColor(m_Red, m_Green, m_Blue, 1.0f);
+        const glm::mat4 viewProjection = camera.GetProjectionMatrix() * camera.GetViewMatrix();
+
+        renderer.SetClearColor(0.08f, 0.10f, 0.15f, 1.0f);
         renderer.Clear();
 
         shader.Bind();
+        shader.SetMat4("u_ViewProjection", viewProjection);
         renderer.Draw(mesh);
         renderer.Draw(cube);
 
@@ -163,31 +173,7 @@ void Application::Run()
     }
 }
 
-void Application::Update(float deltaTime, const Input& input)
+void Application::Update(float deltaTime)
 {
     m_Time += deltaTime;
-
-    // Prueba temporal de Input
-    if (input.IsKeyPressed(Key::W)) m_Green = std::min(1.0f, m_Green + deltaTime * 0.5f);
-    if (input.IsKeyPressed(Key::S)) m_Green = std::max(0.0f, m_Green - deltaTime * 0.5f);
-    if (input.IsKeyPressed(Key::A)) m_Red = std::min(1.0f, m_Red + deltaTime * 0.5f);
-    if (input.IsKeyPressed(Key::D)) m_Red = std::max(0.0f, m_Red - deltaTime * 0.5f);
-
-    const glm::vec2 delta = input.GetMouseDelta();
-    m_LogTimer += deltaTime;
-    if ((delta.x != 0.0f || delta.y != 0.0f) && m_LogTimer >= 0.5f)
-    {
-        const glm::vec2 position = input.GetMousePosition();
-        Logger::Info(
-            "Mouse pos=(" + std::to_string(position.x) + ", " + std::to_string(position.y) +
-            ") delta=(" + std::to_string(delta.x) + ", " + std::to_string(delta.y) + ")"
-        );
-        m_LogTimer = 0.0f;
-    }
-
-    m_Blue = 0.15f;
-    if (input.IsMouseButtonPressed(MouseButton::Left))
-    {
-        m_Blue = 0.28f + 0.18f * std::sin(m_Time * 8.0f);
-    }
 }
