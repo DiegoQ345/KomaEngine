@@ -117,10 +117,10 @@ void Application::Run()
     }
 
     const std::vector<unsigned int> cubeIndices{
-        0, 2, 6, 0, 6, 4, // cara +z
-        1, 5, 7, 1, 7, 3, // cara -z
-        1, 0, 2, 1, 2, 3, // cara +x
-        4, 6, 7, 4, 7, 5, // cara -x
+        0, 6, 2, 0, 4, 6, // cara +z
+        1, 7, 5, 1, 3, 7, // cara -z
+        1, 0, 2, 1, 2, 3, // cara +x (trasera)
+        4, 7, 6, 4, 5, 7, // cara -x (visible)
         1, 5, 4, 1, 4, 0, // cara +y
         3, 2, 6, 3, 6, 7  // cara -y
     };

@@ -8,6 +8,9 @@ Renderer::Renderer()
 {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
 }
 
 void Renderer::SetClearColor(float r, float g, float b, float a)
