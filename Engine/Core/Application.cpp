@@ -48,7 +48,18 @@ void Application::Run()
     Logger::Info(std::string("Version: ") + reinterpret_cast<const char*>(glGetString(GL_VERSION)));
     Logger::Info(std::string("Renderer: ") + reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
-    glViewport(0, 0, 1280, 720);
+    const auto updateViewport = [&window, this]() {
+        int width = 0;
+        int height = 0;
+        glfwGetFramebufferSize(window.GetHandle(), &width, &height);
+        if (width <= 0 || height <= 0) return;
+        if (width == m_FramebufferWidth && height == m_FramebufferHeight) return;
+        m_FramebufferWidth = width;
+        m_FramebufferHeight = height;
+        glViewport(0, 0, width, height);
+    };
+
+    updateViewport();
 
     Input input(window.GetHandle());
 
@@ -62,6 +73,8 @@ void Application::Run()
         float deltaTime = std::chrono::duration<float>(now - last).count();
         deltaTime = std::clamp(deltaTime, 0.0f, 0.1f);
         last = now;
+
+        updateViewport();
 
         input.Update();
 
