@@ -17,6 +17,7 @@ add_library(Engine STATIC
     Core/CameraController.cpp
     Core/GameObject.cpp
     Core/Logger.cpp
+    Core/Scene.cpp
     Core/Transform.cpp
     Platform/Input/Input.cpp
     Platform/Window/Window.cpp

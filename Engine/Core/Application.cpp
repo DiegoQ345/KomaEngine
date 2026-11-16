@@ -6,6 +6,7 @@
 #include "Core/Camera.hpp"
 #include "Core/CameraController.hpp"
 #include "Core/GameObject.hpp"
+#include "Core/Scene.hpp"
 #include "Platform/Window/Window.hpp"
 #include "Renderer/OpenGL/Mesh.hpp"
 #include "Renderer/OpenGL/Renderer.hpp"
@@ -135,15 +136,15 @@ void Application::Run()
     Mesh cube(cubeVertices, cubeIndices);
     Logger::Info("Cube created successfully");
 
-    std::vector<GameObject> gameObjects;
+    Scene scene;
 
-    gameObjects.emplace_back("Cube_Left");
-    gameObjects.back().GetTransform().SetPosition(glm::vec3(-2.0f, 0.0f, 0.0f));
-    gameObjects.back().GetTransform().SetRotationEulerDegrees(glm::vec3(0.0f, 45.0f, 0.0f));
+    auto& cubeLeft = scene.AddGameObject("Cube_Left");
+    cubeLeft.GetTransform().SetPosition(glm::vec3(-2.0f, 0.0f, 0.0f));
+    cubeLeft.GetTransform().SetRotationEulerDegrees(glm::vec3(0.0f, 45.0f, 0.0f));
 
-    gameObjects.emplace_back("Cube_Right");
-    gameObjects.back().GetTransform().SetPosition(glm::vec3(2.0f, 0.0f, 0.0f));
-    gameObjects.back().GetTransform().SetScale(glm::vec3(0.7f, 0.7f, 0.7f));
+    auto& cubeRight = scene.AddGameObject("Cube_Right");
+    cubeRight.GetTransform().SetPosition(glm::vec3(2.0f, 0.0f, 0.0f));
+    cubeRight.GetTransform().SetScale(glm::vec3(0.7f, 0.7f, 0.7f));
 
     Input input(window.GetHandle());
     CameraController cameraController(camera, input, window);
@@ -180,7 +181,7 @@ void Application::Run()
         shader.SetMat4("u_ViewProjection", viewProjection);
         shader.SetMat4("u_Model", glm::mat4(1.0f));
         renderer.Draw(mesh);
-        for (const GameObject& object : gameObjects)
+        for (const GameObject& object : scene.GetGameObjects())
         {
             shader.SetMat4("u_Model", object.GetTransform().GetModelMatrix());
             renderer.Draw(cube);
