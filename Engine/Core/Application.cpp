@@ -12,6 +12,7 @@
 #include "Renderer/OpenGL/Mesh.hpp"
 #include "Renderer/OpenGL/Renderer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
+#include "Renderer/OpenGL/Texture2D.hpp"
 
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
@@ -88,10 +89,16 @@ void Application::Run()
     shader->Bind();
     Logger::Info(std::string("Shader loaded successfully: ") + vertexPath);
 
+    const std::string texturePath = AssetPath("Textures/pattern.png").string();
+    auto texture = assets.LoadTexture2D(texturePath);
+    texture->Bind(0);
+    shader->SetInt("u_TextureSampler", 0);
+    Logger::Info("Texture loaded and bound: " + std::to_string(texture->GetSize().x) + "x" + std::to_string(texture->GetSize().y));
+
     const std::vector<Mesh::Vertex> vertices{
-        {  0.0f,  0.5f, 0.0f },
-        { -0.5f, -0.5f, 0.0f },
-        {  0.5f, -0.5f, 0.0f }
+        {  0.0f,  0.5f, 0.0f,  0.5f, 1.0f },
+        { -0.5f, -0.5f, 0.0f,  0.0f, 0.0f },
+        {  0.5f, -0.5f, 0.0f,  1.0f, 0.0f }
     };
     const std::vector<unsigned int> indices{ 0, 1, 2 };
 
@@ -122,7 +129,9 @@ void Application::Run()
         Mesh::Vertex v{
             xr + offsetX,
             yr * cosX - zr * sinX + offsetY,
-            yr * sinX + zr * cosX
+            yr * sinX + zr * cosX,
+            0.0f,
+            0.0f
         };
         cubeVertices.push_back(v);
     }

@@ -26,8 +26,13 @@ add_library(Engine STATIC
     Renderer/OpenGL/Mesh.cpp
     Renderer/OpenGL/Renderer.cpp
     Renderer/OpenGL/Shader.cpp
+    Renderer/OpenGL/Texture2D.cpp
     Renderer/OpenGL/VertexArray.cpp
     Renderer/OpenGL/VertexBuffer.cpp
+)
+
+target_include_directories(Engine PRIVATE
+    ${PROJECT_SOURCE_DIR}/Dependencies
 )
 
 target_include_directories(Engine PUBLIC

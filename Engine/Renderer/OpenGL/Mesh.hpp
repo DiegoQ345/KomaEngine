@@ -12,6 +12,7 @@ public:
     struct Vertex
     {
         float x, y, z;
+        float u, v;
     };
 
     Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);

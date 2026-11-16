@@ -4,6 +4,8 @@
 #include "Core/Logger.hpp"
 
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 std::shared_ptr<Shader> AssetManager::LoadShader(
     const std::filesystem::path& vertexPath,
@@ -15,16 +17,19 @@ std::shared_ptr<Shader> AssetManager::LoadShader(
 
     const std::string key = ShaderAssetKey(vertex, fragment);
 
-    const auto cached = m_Resources.find(key);
-    if (cached != m_Resources.end())
-    {
-        return std::static_pointer_cast<Shader>(cached->second);
-    }
+    return LoadCached<Shader>(key, [&] {
+        return std::make_shared<Shader>(vertex.string().c_str(), fragment.string().c_str());
+    });
+}
 
-    auto shader = std::make_shared<Shader>(vertex.string().c_str(), fragment.string().c_str());
-    m_Resources[key] = shader;
+std::shared_ptr<Texture2D> AssetManager::LoadTexture2D(const std::filesystem::path& path)
+{
+    const std::filesystem::path resolved = AssetPath(path.string().c_str());
+    const std::string key = "texture|" + std::filesystem::weakly_canonical(resolved).string();
 
-    return shader;
+    return LoadCached<Texture2D>(key, [&] {
+        return std::make_shared<Texture2D>(resolved);
+    });
 }
 
 void AssetManager::ReleaseAll()

@@ -19,8 +19,8 @@ public:
     std::string_view GetType() const override { return "shader"; }
 
     void Bind() const;
-    // Requiere que el programa este enlazado/Bind
     void SetMat4(const char* name, const glm::mat4& matrix) const;
+    void SetInt(const char* name, int value) const;
 
 private:
     GLuint m_Program = 0;

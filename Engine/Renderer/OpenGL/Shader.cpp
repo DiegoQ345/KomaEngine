@@ -121,6 +121,19 @@ void Shader::Bind() const
     glUseProgram(m_Program);
 }
 
+void Shader::SetInt(const char* name, int value) const
+{
+    const GLint location = glGetUniformLocation(m_Program, name);
+
+    if (location == -1)
+    {
+        Logger::Warning(std::string("SetInt: uniform not found: ") + name);
+        return;
+    }
+
+    glUniform1i(location, value);
+}
+
 void Shader::SetMat4(const char* name, const glm::mat4& matrix) const
 {
     const GLint location = glGetUniformLocation(m_Program, name);
