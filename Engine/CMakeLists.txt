@@ -12,9 +12,11 @@ target_include_directories(glad PUBLIC
 # Engine
 add_library(Engine STATIC
     Core/Application.cpp
+    Core/AssetPaths.cpp
     Core/Logger.cpp
     Platform/Input/Input.cpp
     Platform/Window/Window.cpp
+    Renderer/OpenGL/Shader.cpp
 )
 
 target_include_directories(Engine PUBLIC

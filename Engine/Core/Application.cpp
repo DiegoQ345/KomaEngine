@@ -1,8 +1,10 @@
 #include "Application.hpp"
 
+#include "Core/AssetPaths.hpp"
 #include "Core/Logger.hpp"
 #include "Platform/Input/Input.hpp"
 #include "Platform/Window/Window.hpp"
+#include "Renderer/OpenGL/Shader.hpp"
 
 #include <glad/gl.h>
 
@@ -60,6 +62,13 @@ void Application::Run()
     };
 
     updateViewport();
+
+    const std::string vertexPath = AssetPath("Shaders/basic.vert").string();
+    const std::string fragmentPath = AssetPath("Shaders/basic.frag").string();
+
+    Shader shader(vertexPath.c_str(), fragmentPath.c_str());
+    shader.Bind();
+    Logger::Info(std::string("Shader loaded successfully: ") + vertexPath);
 
     Input input(window.GetHandle());
 
