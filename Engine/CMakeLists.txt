@@ -17,6 +17,7 @@ add_library(Engine STATIC
     Platform/Input/Input.cpp
     Platform/Window/Window.cpp
     Renderer/OpenGL/IndexBuffer.cpp
+    Renderer/OpenGL/Mesh.cpp
     Renderer/OpenGL/Shader.cpp
     Renderer/OpenGL/VertexArray.cpp
     Renderer/OpenGL/VertexBuffer.cpp
