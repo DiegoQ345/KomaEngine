@@ -13,6 +13,7 @@ target_include_directories(glad PUBLIC
 add_library(Engine STATIC
     Core/Application.cpp
     Core/AssetPaths.cpp
+    Core/Camera.cpp
     Core/Logger.cpp
     Core/Transform.cpp
     Platform/Input/Input.cpp
