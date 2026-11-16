@@ -13,6 +13,7 @@ target_include_directories(glad PUBLIC
 add_library(Engine STATIC
     Core/Application.cpp
     Core/Logger.cpp
+    Platform/Input/Input.cpp
     Platform/Window/Window.cpp
 )
 
