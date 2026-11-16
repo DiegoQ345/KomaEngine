@@ -4,7 +4,9 @@
 #include "Core/Logger.hpp"
 #include "Platform/Input/Input.hpp"
 #include "Platform/Window/Window.hpp"
+#include "Renderer/OpenGL/IndexBuffer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
+#include "Renderer/OpenGL/VertexBuffer.hpp"
 
 #include <glad/gl.h>
 
@@ -69,6 +71,26 @@ void Application::Run()
     Shader shader(vertexPath.c_str(), fragmentPath.c_str());
     shader.Bind();
     Logger::Info(std::string("Shader loaded successfully: ") + vertexPath);
+
+    const float vertices[] = {
+        0.0f,  0.5f, 0.0f,
+        -0.5f, -0.5f, 0.0f,
+        0.5f, -0.5f, 0.0f
+    };
+    const unsigned int indices[] = { 0, 1, 2 };
+
+    VertexBuffer vertexBuffer(vertices, sizeof(vertices));
+    IndexBuffer indexBuffer(indices, sizeof(indices) / sizeof(indices[0]));
+
+    if (indexBuffer.GetCount() != 3)
+    {
+        Logger::Error("IndexBuffer reported an unexpected index count");
+        throw std::runtime_error("IndexBuffer reported an unexpected index count");
+    }
+
+    vertexBuffer.Bind();
+    indexBuffer.Bind();
+    Logger::Info("VertexBuffer and IndexBuffer created successfully");
 
     Input input(window.GetHandle());
 

@@ -16,7 +16,9 @@ add_library(Engine STATIC
     Core/Logger.cpp
     Platform/Input/Input.cpp
     Platform/Window/Window.cpp
+    Renderer/OpenGL/IndexBuffer.cpp
     Renderer/OpenGL/Shader.cpp
+    Renderer/OpenGL/VertexBuffer.cpp
 )
 
 target_include_directories(Engine PUBLIC
