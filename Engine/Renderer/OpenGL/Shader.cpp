@@ -1,9 +1,11 @@
 #include "Shader.hpp"
 
+#include "Core/AssetPaths.hpp"
 #include "Core/Logger.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -56,6 +58,7 @@ namespace
 }
 
 Shader::Shader(const char* vertexPath, const char* fragmentPath)
+    : Resource(ShaderAssetKey(std::filesystem::path(vertexPath), std::filesystem::path(fragmentPath)))
 {
     const std::string vertexSource = ReadFile(vertexPath);
     const std::string fragmentSource = ReadFile(fragmentPath);

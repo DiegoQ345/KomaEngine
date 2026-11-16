@@ -11,6 +11,7 @@ target_include_directories(glad PUBLIC
 
 # Engine
 add_library(Engine STATIC
+    Assets/AssetManager.cpp
     Core/Application.cpp
     Core/AssetPaths.cpp
     Core/Camera.cpp

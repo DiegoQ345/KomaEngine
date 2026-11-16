@@ -1,5 +1,6 @@
-#include "Application.hpp"
+﻿#include "Application.hpp"
 
+#include "Assets/AssetManager.hpp"
 #include "Core/AssetPaths.hpp"
 #include "Core/Logger.hpp"
 #include "Platform/Input/Input.hpp"
@@ -24,6 +25,7 @@
 #include <algorithm>
 #include <chrono>
 #include <stdexcept>
+#include <string>
 #include <string>
 #include <vector>
 
@@ -77,12 +79,13 @@ void Application::Run()
     updateViewport();
 
     Renderer renderer;
+    AssetManager assets;
 
     const std::string vertexPath = AssetPath("Shaders/basic.vert").string();
     const std::string fragmentPath = AssetPath("Shaders/basic.frag").string();
 
-    Shader shader(vertexPath.c_str(), fragmentPath.c_str());
-    shader.Bind();
+    auto shader = assets.LoadShader(vertexPath, fragmentPath);
+    shader->Bind();
     Logger::Info(std::string("Shader loaded successfully: ") + vertexPath);
 
     const std::vector<Mesh::Vertex> vertices{
@@ -177,13 +180,13 @@ void Application::Run()
         renderer.SetClearColor(0.08f, 0.10f, 0.15f, 1.0f);
         renderer.Clear();
 
-        shader.Bind();
-        shader.SetMat4("u_ViewProjection", viewProjection);
-        shader.SetMat4("u_Model", glm::mat4(1.0f));
+        shader->Bind();
+        shader->SetMat4("u_ViewProjection", viewProjection);
+        shader->SetMat4("u_Model", glm::mat4(1.0f));
         renderer.Draw(mesh);
         for (const auto& object : scene.GetGameObjects())
         {
-            shader.SetMat4("u_Model", scene.GetWorldMatrix(*object));
+            shader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
             renderer.Draw(cube);
         }
 
@@ -195,3 +198,4 @@ void Application::Update(float deltaTime)
 {
     m_Time += deltaTime;
 }
+

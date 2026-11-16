@@ -9,6 +9,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace
@@ -78,4 +79,19 @@ std::filesystem::path AssetPath(const char* relative)
     }
 
     return path;
+}
+
+std::string ShaderAssetKey(const std::filesystem::path& vertexPath, const std::filesystem::path& fragmentPath)
+{
+    std::error_code vertexError;
+    std::error_code fragmentError;
+
+    const std::filesystem::path vertex = std::filesystem::weakly_canonical(vertexPath, vertexError);
+    const std::filesystem::path fragment = std::filesystem::weakly_canonical(fragmentPath, fragmentError);
+
+    const std::filesystem::path canonicalVertex = vertexError ? vertexPath : vertex;
+    const std::filesystem::path canonicalFragment = fragmentError ? fragmentPath : fragment;
+
+    return std::string("shader|vertex=") + canonicalVertex.string()
+        + "|fragment=" + canonicalFragment.string();
 }

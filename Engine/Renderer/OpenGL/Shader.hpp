@@ -3,15 +3,20 @@
 #include <glad/gl.h>
 
 #include <glm/mat4x4.hpp>
+#include <string_view>
 
-class Shader
+#include "Assets/Resource.hpp"
+
+class Shader : public Resource
 {
 public:
     Shader(const char* vertexPath, const char* fragmentPath);
-    ~Shader();
+    ~Shader() override;
 
     Shader(const Shader&) = delete;
     Shader& operator=(const Shader&) = delete;
+
+    std::string_view GetType() const override { return "shader"; }
 
     void Bind() const;
     // Requiere que el programa este enlazado/Bind
