@@ -1,30 +1,23 @@
 #include "Camera.hpp"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include <stdexcept>
 #include <cmath>
-#include <algorithm>
 
-namespace
+Camera::Camera()
 {
-    constexpr float kEpsilon = 1e-5f;
-
-    bool IsDirectionDegenerate(const glm::vec3& direction, const glm::vec3& up)
-    {
-        if (glm::length(direction) < kEpsilon) return true;
-        if (glm::length(up) < kEpsilon) return true;
-
-        const glm::vec3 forward = glm::normalize(direction);
-        const glm::vec3 upNormalized = glm::normalize(up);
-
-        return glm::length(glm::cross(forward, upNormalized)) < kEpsilon;
-    }
+    m_Transform.SetPosition(glm::vec3(0.0f, 0.0f, 3.0f));
 }
 
 glm::mat4 Camera::GetViewMatrix() const
 {
-    return glm::lookAt(m_Position, m_Target, m_Up);
+    // View = (T * R)^-1 = R^-1 * T(-p) = mat4_cast(conjugate(q)) * translate(-p)
+    const glm::mat4 rotation = glm::mat4_cast(glm::conjugate(m_Transform.GetRotation()));
+    const glm::mat4 inverseTranslation = glm::translate(glm::mat4(1.0f), -m_Transform.GetPosition());
+
+    return rotation * inverseTranslation;
 }
 
 glm::mat4 Camera::GetProjectionMatrix() const
@@ -34,50 +27,42 @@ glm::mat4 Camera::GetProjectionMatrix() const
 
 void Camera::SetPosition(const glm::vec3& position)
 {
-    const glm::vec3 direction = m_Target - position;
-    if (IsDirectionDegenerate(direction, m_Up))
-    {
-        throw std::invalid_argument("Camera position cannot coincide with target or be parallel to Up");
-    }
-
-    m_Position = position;
+    m_Transform.SetPosition(position);
 }
 
 glm::vec3 Camera::GetPosition() const
 {
-    return m_Position;
+    return m_Transform.GetPosition();
 }
 
-void Camera::SetTarget(const glm::vec3& target)
+void Camera::SetRotation(const glm::quat& rotation)
 {
-    const glm::vec3 direction = target - m_Position;
-    if (IsDirectionDegenerate(direction, m_Up))
-    {
-        throw std::invalid_argument("Camera target cannot coincide with position or be parallel to Up");
-    }
-
-    m_Target = target;
+    m_Transform.SetRotation(rotation);
 }
 
-glm::vec3 Camera::GetTarget() const
+glm::quat Camera::GetRotation() const
 {
-    return m_Target;
+    return m_Transform.GetRotation();
 }
 
-void Camera::SetUp(const glm::vec3& up)
+void Camera::SetRotationEulerDegrees(const glm::vec3& eulerDegrees)
 {
-    const glm::vec3 direction = m_Target - m_Position;
-    if (IsDirectionDegenerate(direction, up))
-    {
-        throw std::invalid_argument("Camera Up cannot be zero or parallel to the view direction");
-    }
+    m_Transform.SetRotationEulerDegrees(eulerDegrees);
+}
 
-    m_Up = up;
+glm::vec3 Camera::GetForward() const
+{
+    return glm::normalize(m_Transform.GetRotation() * glm::vec3(0.0f, 0.0f, -1.0f));
+}
+
+glm::vec3 Camera::GetRight() const
+{
+    return glm::normalize(m_Transform.GetRotation() * glm::vec3(1.0f, 0.0f, 0.0f));
 }
 
 glm::vec3 Camera::GetUp() const
 {
-    return m_Up;
+    return glm::normalize(m_Transform.GetRotation() * glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 void Camera::SetFieldOfView(float degrees)

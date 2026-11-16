@@ -1,21 +1,27 @@
 #pragma once
 
+#include "Transform.hpp"
+
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
 class Camera
 {
 public:
+    Camera();
+
     glm::mat4 GetViewMatrix() const;
     glm::mat4 GetProjectionMatrix() const;
 
     void SetPosition(const glm::vec3& position);
     glm::vec3 GetPosition() const;
 
-    void SetTarget(const glm::vec3& target);
-    glm::vec3 GetTarget() const;
+    void SetRotation(const glm::quat& rotation);
+    glm::quat GetRotation() const;
+    void SetRotationEulerDegrees(const glm::vec3& eulerDegrees);
 
-    void SetUp(const glm::vec3& up);
+    glm::vec3 GetForward() const;
+    glm::vec3 GetRight() const;
     glm::vec3 GetUp() const;
 
     void SetFieldOfView(float degrees);
@@ -31,9 +37,8 @@ public:
     float GetFarPlane() const;
 
 private:
-    glm::vec3 m_Position{0.0f, 0.0f, 3.0f};
-    glm::vec3 m_Target{0.0f, 0.0f, 0.0f};
-    glm::vec3 m_Up{0.0f, 1.0f, 0.0f};
+    Transform m_Transform;
+
     float m_Fov = 45.0f;
     float m_AspectRatio = 16.0f / 9.0f;
     float m_Near = 0.1f;
