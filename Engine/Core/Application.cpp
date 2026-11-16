@@ -181,9 +181,9 @@ void Application::Run()
         shader.SetMat4("u_ViewProjection", viewProjection);
         shader.SetMat4("u_Model", glm::mat4(1.0f));
         renderer.Draw(mesh);
-        for (const GameObject& object : scene.GetGameObjects())
+        for (const auto& object : scene.GetGameObjects())
         {
-            shader.SetMat4("u_Model", object.GetTransform().GetModelMatrix());
+            shader.SetMat4("u_Model", scene.GetWorldMatrix(*object));
             renderer.Draw(cube);
         }
 
