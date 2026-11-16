@@ -25,6 +25,25 @@ void Application::Run()
         throw std::runtime_error("Failed to initialize GLAD");
     }
 
+    GLint majorVersion = 0;
+    GLint minorVersion = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
+    glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+
+    if (majorVersion < 4 || (majorVersion == 4 && minorVersion < 6))
+    {
+        Logger::Error(
+            "OpenGL 4.6 Core required, but got " + std::to_string(majorVersion) + "." +
+            std::to_string(minorVersion)
+        );
+        throw std::runtime_error("OpenGL 4.6 Core context is not available");
+    }
+
+    Logger::Info(
+        "OpenGL " + std::to_string(majorVersion) + "." + std::to_string(minorVersion) +
+        " Core validated"
+    );
+
     Logger::Info("OpenGL initialized successfully");
     Logger::Info(std::string("Version: ") + reinterpret_cast<const char*>(glGetString(GL_VERSION)));
     Logger::Info(std::string("Renderer: ") + reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
