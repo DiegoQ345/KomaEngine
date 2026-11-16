@@ -6,6 +6,7 @@
 #include "Platform/Window/Window.hpp"
 #include "Renderer/OpenGL/IndexBuffer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
+#include "Renderer/OpenGL/VertexArray.hpp"
 #include "Renderer/OpenGL/VertexBuffer.hpp"
 
 #include <glad/gl.h>
@@ -72,6 +73,9 @@ void Application::Run()
     shader.Bind();
     Logger::Info(std::string("Shader loaded successfully: ") + vertexPath);
 
+    VertexArray vertexArray;
+    vertexArray.Bind();
+
     const float vertices[] = {
         0.0f,  0.5f, 0.0f,
         -0.5f, -0.5f, 0.0f,
@@ -82,15 +86,17 @@ void Application::Run()
     VertexBuffer vertexBuffer(vertices, sizeof(vertices));
     IndexBuffer indexBuffer(indices, sizeof(indices) / sizeof(indices[0]));
 
+    vertexArray.AddVertexBuffer(vertexBuffer);
+    vertexArray.EnableVertexAttribute(0, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(3 * sizeof(float)), 0);
+    vertexArray.SetIndexBuffer(indexBuffer);
+
     if (indexBuffer.GetCount() != 3)
     {
         Logger::Error("IndexBuffer reported an unexpected index count");
         throw std::runtime_error("IndexBuffer reported an unexpected index count");
     }
 
-    vertexBuffer.Bind();
-    indexBuffer.Bind();
-    Logger::Info("VertexBuffer and IndexBuffer created successfully");
+    Logger::Info("VertexArray created successfully");
 
     Input input(window.GetHandle());
 
