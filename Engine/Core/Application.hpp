@@ -19,6 +19,7 @@ private:
     float m_Time = 0.0f;
     float m_Red = 0.08f;
     float m_Green = 0.10f;
+    float m_Blue = 0.15f;
     float m_LogTimer = 0.0f;
 
     int m_FramebufferWidth = -1;

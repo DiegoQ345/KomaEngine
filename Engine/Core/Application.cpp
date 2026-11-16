@@ -5,7 +5,10 @@
 #include "Platform/Input/Input.hpp"
 #include "Platform/Window/Window.hpp"
 #include "Renderer/OpenGL/Mesh.hpp"
+#include "Renderer/OpenGL/Renderer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
+
+#include <glm/vec2.hpp>
 
 #include <glad/gl.h>
 
@@ -65,6 +68,8 @@ void Application::Run()
 
     updateViewport();
 
+    Renderer renderer;
+
     const std::string vertexPath = AssetPath("Shaders/basic.vert").string();
     const std::string fragmentPath = AssetPath("Shaders/basic.frag").string();
 
@@ -81,6 +86,47 @@ void Application::Run()
 
     Mesh mesh(vertices, indices);
     Logger::Info("Mesh created successfully");
+
+    const float cos45 = 0.70710678f;
+    const float cosX = 0.81649658f;
+    const float sinX = 0.57735027f;
+    const float s = 0.3f;
+    const float offsetX = 0.55f;
+    const float offsetY = 0.1f;
+
+    std::vector<Mesh::Vertex> cubeVertices;
+    cubeVertices.reserve(8);
+
+    const float corner[8][3] = {
+        { s,  s,  s}, { s,  s, -s}, { s, -s,  s}, { s, -s, -s},
+        {-s,  s,  s}, {-s,  s, -s}, {-s, -s,  s}, {-s, -s, -s}
+    };
+
+    for (const auto& c : corner)
+    {
+        const float xr = c[0] * cos45 + c[2] * cos45;
+        const float yr = c[1];
+        const float zr = -c[0] * cos45 + c[2] * cos45;
+
+        Mesh::Vertex v{
+            xr + offsetX,
+            yr * cosX - zr * sinX + offsetY,
+            yr * sinX + zr * cosX
+        };
+        cubeVertices.push_back(v);
+    }
+
+    const std::vector<unsigned int> cubeIndices{
+        0, 2, 6, 0, 6, 4, // cara +z
+        1, 5, 7, 1, 7, 3, // cara -z
+        1, 0, 2, 1, 2, 3, // cara +x
+        4, 6, 7, 4, 7, 5, // cara -x
+        1, 5, 4, 1, 4, 0, // cara +y
+        3, 2, 6, 3, 6, 7  // cara -y
+    };
+
+    Mesh cube(cubeVertices, cubeIndices);
+    Logger::Info("Cube created successfully");
 
     Input input(window.GetHandle());
 
@@ -106,10 +152,12 @@ void Application::Run()
 
         Update(deltaTime, input);
 
-        glClear(GL_COLOR_BUFFER_BIT);
+        renderer.SetClearColor(m_Red, m_Green, m_Blue, 1.0f);
+        renderer.Clear();
 
         shader.Bind();
-        mesh.Draw();
+        renderer.Draw(mesh);
+        renderer.Draw(cube);
 
         window.SwapBuffers();
     }
@@ -137,11 +185,9 @@ void Application::Update(float deltaTime, const Input& input)
         m_LogTimer = 0.0f;
     }
 
-    float blue = 0.15f;
+    m_Blue = 0.15f;
     if (input.IsMouseButtonPressed(MouseButton::Left))
     {
-        blue = 0.28f + 0.18f * std::sin(m_Time * 8.0f);
+        m_Blue = 0.28f + 0.18f * std::sin(m_Time * 8.0f);
     }
-
-    glClearColor(m_Red, m_Green, blue, 1.0f);
 }
