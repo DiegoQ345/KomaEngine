@@ -3,6 +3,7 @@
 #include <glad/gl.h>
 
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 #include <string_view>
 
 #include "Assets/Resource.hpp"
@@ -20,6 +21,7 @@ public:
 
     void Bind() const;
     void SetMat4(const char* name, const glm::mat4& matrix) const;
+    void SetVec3(const char* name, const glm::vec3& value) const;
     void SetInt(const char* name, int value) const;
 
 private:

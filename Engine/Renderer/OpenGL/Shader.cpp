@@ -146,3 +146,16 @@ void Shader::SetMat4(const char* name, const glm::mat4& matrix) const
 
     glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
 }
+
+void Shader::SetVec3(const char* name, const glm::vec3& value) const
+{
+    const GLint location = glGetUniformLocation(m_Program, name);
+
+    if (location == -1)
+    {
+        Logger::Warning(std::string("SetVec3: uniform not found: ") + name);
+        return;
+    }
+
+    glUniform3fv(location, 1, glm::value_ptr(value));
+}

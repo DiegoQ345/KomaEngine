@@ -10,12 +10,14 @@
 #include "Core/Scene.hpp"
 #include "Platform/Window/Window.hpp"
 #include "Renderer/OpenGL/Mesh.hpp"
+#include "Renderer/OpenGL/Material.hpp"
 #include "Renderer/OpenGL/Renderer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
 #include "Renderer/OpenGL/Texture2D.hpp"
 
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
 
 #include <glad/gl.h>
@@ -95,10 +97,19 @@ void Application::Run()
     shader->SetInt("u_TextureSampler", 0);
     Logger::Info("Texture loaded and bound: " + std::to_string(texture->GetSize().x) + "x" + std::to_string(texture->GetSize().y));
 
+    Material materialTriangle(shader, texture);
+    materialTriangle.SetBaseColor(glm::vec3(1.0f));
+
+    Material materialLeft(shader, texture);
+    materialLeft.SetBaseColor(glm::vec3(0.95f, 0.25f, 0.25f));
+
+    Material materialRight(shader, texture);
+    materialRight.SetBaseColor(glm::vec3(0.05f, 0.15f, 1.0f));
+
     const std::vector<Mesh::Vertex> vertices{
-        {  0.0f,  0.5f, 0.0f,  0.5f, 1.0f },
-        { -0.5f, -0.5f, 0.0f,  0.0f, 0.0f },
-        {  0.5f, -0.5f, 0.0f,  1.0f, 0.0f }
+        {  0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.5f, 1.0f },
+        { -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f },
+        {  0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f }
     };
     const std::vector<unsigned int> indices{ 0, 1, 2 };
 
@@ -112,38 +123,102 @@ void Application::Run()
     const float offsetX = 0.55f;
     const float offsetY = 0.1f;
 
-    std::vector<Mesh::Vertex> cubeVertices;
-    cubeVertices.reserve(8);
-
     const float corner[8][3] = {
         { s,  s,  s}, { s,  s, -s}, { s, -s,  s}, { s, -s, -s},
         {-s,  s,  s}, {-s,  s, -s}, {-s, -s,  s}, {-s, -s, -s}
     };
 
-    for (const auto& c : corner)
+    glm::vec3 projected[8];
+    for (int i = 0; i < 8; i++)
     {
+        const float* c = corner[i];
         const float xr = c[0] * cos45 + c[2] * cos45;
         const float yr = c[1];
         const float zr = -c[0] * cos45 + c[2] * cos45;
 
-        Mesh::Vertex v{
+        projected[i] = glm::vec3(
             xr + offsetX,
             yr * cosX - zr * sinX + offsetY,
-            yr * sinX + zr * cosX,
-            0.0f,
-            0.0f
-        };
-        cubeVertices.push_back(v);
+            yr * sinX + zr * cosX
+        );
     }
 
-    const std::vector<unsigned int> cubeIndices{
-        0, 6, 2, 0, 4, 6, // cara +z
-        1, 7, 5, 1, 3, 7, // cara -z
-        1, 0, 2, 1, 2, 3, // cara +x (trasera)
-        4, 7, 6, 4, 5, 7, // cara -x (visible)
-        1, 5, 4, 1, 4, 0, // cara +y
-        3, 2, 6, 3, 6, 7  // cara -y
+    struct CubeFace
+    {
+        int corners[4];
+        bool reversed;
     };
+
+    const CubeFace cubeFaces[6] = {
+        { { 0, 2, 6, 4 }, false }, // cara +z
+        { { 1, 5, 7, 3 }, false }, // cara -z
+        { { 1, 0, 2, 3 }, false }, // cara +x
+        { { 4, 6, 7, 5 }, false }, // cara -x
+        { { 1, 5, 4, 0 }, false }, // cara +y
+        { { 3, 2, 6, 7 }, false }  // cara -y
+    };
+
+    const glm::vec2 faceUVs[4] = {
+        glm::vec2(0.0f, 0.0f),
+        glm::vec2(1.0f, 0.0f),
+        glm::vec2(1.0f, 1.0f),
+        glm::vec2(0.0f, 1.0f)
+    };
+
+    const glm::vec3 cubeCenter{offsetX, offsetY, 0.0f};
+
+    std::vector<Mesh::Vertex> cubeVertices;
+    cubeVertices.reserve(24);
+    std::vector<unsigned int> cubeIndices;
+    cubeIndices.reserve(36);
+
+    for (const CubeFace& face : cubeFaces)
+    {
+        bool reversed = face.reversed;
+
+        const glm::vec3 p0 = projected[face.corners[0]];
+        const glm::vec3 p1 = projected[face.corners[1]];
+        const glm::vec3 p2 = projected[face.corners[2]];
+        const glm::vec3 p3 = projected[face.corners[3]];
+
+        glm::vec3 normal = glm::normalize(glm::cross(p1 - p0, p2 - p0));
+        if (glm::dot(normal, p0 - cubeCenter) < 0.0f)
+        {
+            normal = -normal;
+            reversed = !reversed;
+        }
+
+        const unsigned int base = static_cast<unsigned int>(cubeVertices.size());
+        const glm::vec3 corners[4] = { p0, p1, p2, p3 };
+
+        for (int i = 0; i < 4; i++)
+        {
+            cubeVertices.push_back(Mesh::Vertex{
+                corners[i].x, corners[i].y, corners[i].z,
+                normal.x, normal.y, normal.z,
+                faceUVs[i].x, faceUVs[i].y
+            });
+        }
+
+        if (reversed)
+        {
+            cubeIndices.push_back(base + 0);
+            cubeIndices.push_back(base + 2);
+            cubeIndices.push_back(base + 1);
+            cubeIndices.push_back(base + 0);
+            cubeIndices.push_back(base + 3);
+            cubeIndices.push_back(base + 2);
+        }
+        else
+        {
+            cubeIndices.push_back(base + 0);
+            cubeIndices.push_back(base + 1);
+            cubeIndices.push_back(base + 2);
+            cubeIndices.push_back(base + 0);
+            cubeIndices.push_back(base + 2);
+            cubeIndices.push_back(base + 3);
+        }
+    }
 
     Mesh cube(cubeVertices, cubeIndices);
     Logger::Info("Cube created successfully");
@@ -192,11 +267,14 @@ void Application::Run()
         shader->Bind();
         shader->SetMat4("u_ViewProjection", viewProjection);
         shader->SetMat4("u_Model", glm::mat4(1.0f));
-        renderer.Draw(mesh);
+        renderer.Draw(mesh, materialTriangle);
         for (const auto& object : scene.GetGameObjects())
         {
+            const Material& material =
+                (object->GetName() == "Cube_Left") ? materialLeft : materialRight;
+
             shader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
-            renderer.Draw(cube);
+            renderer.Draw(cube, material);
         }
 
         window.SwapBuffers();

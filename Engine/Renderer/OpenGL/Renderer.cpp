@@ -1,5 +1,6 @@
 #include "Renderer.hpp"
 
+#include "Material.hpp"
 #include "Mesh.hpp"
 
 #include <glad/gl.h>
@@ -25,5 +26,11 @@ void Renderer::Clear() const
 
 void Renderer::Draw(const Mesh& mesh) const
 {
+    mesh.Draw();
+}
+
+void Renderer::Draw(const Mesh& mesh, const Material& material) const
+{
+    material.Bind();
     mesh.Draw();
 }

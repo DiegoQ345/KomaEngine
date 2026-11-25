@@ -4,6 +4,7 @@
 #include "VertexArray.hpp"
 #include "VertexBuffer.hpp"
 
+#include <cstddef>
 #include <vector>
 
 class Mesh
@@ -11,9 +12,15 @@ class Mesh
 public:
     struct Vertex
     {
-        float x, y, z;
+        float px, py, pz;
+        float nx, ny, nz;
         float u, v;
     };
+
+    static_assert(sizeof(Vertex) == 32);
+    static_assert(offsetof(Vertex, px) == 0);
+    static_assert(offsetof(Vertex, nx) == 12);
+    static_assert(offsetof(Vertex, u) == 24);
 
     Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
     ~Mesh() = default;
