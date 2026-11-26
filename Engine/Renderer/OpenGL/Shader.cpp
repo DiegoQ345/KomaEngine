@@ -121,41 +121,45 @@ void Shader::Bind() const
     glUseProgram(m_Program);
 }
 
-void Shader::SetInt(const char* name, int value) const
+GLint Shader::GetUniformLocation(const char* name) const
 {
+    const auto cached = m_UniformLocations.find(name);
+    if (cached != m_UniformLocations.end())
+    {
+        return cached->second;
+    }
+
     const GLint location = glGetUniformLocation(m_Program, name);
+    m_UniformLocations[name] = location;
 
     if (location == -1)
     {
-        Logger::Warning(std::string("SetInt: uniform not found: ") + name);
-        return;
+        Logger::Warning(std::string("Uniform not found or inactive: ") + name);
     }
+
+    return location;
+}
+
+void Shader::SetInt(const char* name, int value) const
+{
+    const GLint location = GetUniformLocation(name);
+    if (location == -1) return;
 
     glUniform1i(location, value);
 }
 
 void Shader::SetMat4(const char* name, const glm::mat4& matrix) const
 {
-    const GLint location = glGetUniformLocation(m_Program, name);
-
-    if (location == -1)
-    {
-        Logger::Warning(std::string("SetMat4: uniform not found: ") + name);
-        return;
-    }
+    const GLint location = GetUniformLocation(name);
+    if (location == -1) return;
 
     glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
 }
 
 void Shader::SetVec3(const char* name, const glm::vec3& value) const
 {
-    const GLint location = glGetUniformLocation(m_Program, name);
-
-    if (location == -1)
-    {
-        Logger::Warning(std::string("SetVec3: uniform not found: ") + name);
-        return;
-    }
+    const GLint location = GetUniformLocation(name);
+    if (location == -1) return;
 
     glUniform3fv(location, 1, glm::value_ptr(value));
 }
