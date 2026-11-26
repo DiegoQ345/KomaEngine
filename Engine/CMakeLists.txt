@@ -1,5 +1,6 @@
 find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
+find_package(assimp CONFIG REQUIRED)
 
 add_library(glad STATIC
     ${PROJECT_SOURCE_DIR}/Dependencies/GLAD/src/gl.c
@@ -12,6 +13,7 @@ target_include_directories(glad PUBLIC
 # Engine
 add_library(Engine STATIC
     Assets/AssetManager.cpp
+    Assets/Import/ModelImporter.cpp
     Core/Application.cpp
     Core/AssetPaths.cpp
     Core/Camera.cpp
@@ -46,4 +48,5 @@ target_link_libraries(Engine
         glm::glm
     PRIVATE
         glad
+        assimp::assimp
 )

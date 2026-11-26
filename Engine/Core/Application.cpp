@@ -1,6 +1,7 @@
 ﻿#include "Application.hpp"
 
 #include "Assets/AssetManager.hpp"
+#include "Assets/Import/ModelImporter.hpp"
 #include "Core/AssetPaths.hpp"
 #include "Core/Logger.hpp"
 #include "Platform/Input/Input.hpp"
@@ -8,6 +9,7 @@
 #include "Core/CameraController.hpp"
 #include "Core/GameObject.hpp"
 #include "Core/Scene.hpp"
+#include "Core/Transform.hpp"
 #include "Platform/Window/Window.hpp"
 #include "Renderer/OpenGL/Mesh.hpp"
 #include "Renderer/OpenGL/Material.hpp"
@@ -233,6 +235,19 @@ void Application::Run()
     cubeRight.GetTransform().SetPosition(glm::vec3(2.0f, 0.0f, 0.0f));
     cubeRight.GetTransform().SetScale(glm::vec3(0.7f, 0.7f, 0.7f));
 
+    ModelImporter importer;
+    Model importedModel = importer.Load(AssetPath("Models/textured_mesh.obj").string().c_str());
+    Logger::Info("Model loaded: " + importedModel.Name + " meshes=" +
+                 std::to_string(importedModel.Meshes.size()));
+
+    Transform importedTransform;
+    importedTransform.SetPosition(glm::vec3(0.0f, 0.4f, -2.5f));
+    importedTransform.SetRotationEulerDegrees(glm::vec3(-25.0f, 35.0f, 0.0f));
+    importedTransform.SetScale(glm::vec3(1.6f, 1.6f, 1.6f));
+
+    Material materialModel(shader, texture);
+    materialModel.SetBaseColor(glm::vec3(0.8f, 0.8f, 0.8f));
+
     Input input(window.GetHandle());
     CameraController cameraController(camera, input, window);
 
@@ -275,6 +290,12 @@ void Application::Run()
 
             shader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
             renderer.Draw(cube, material);
+        }
+
+        shader->SetMat4("u_Model", importedTransform.GetModelMatrix());
+        for (const auto& importedMesh : importedModel.Meshes)
+        {
+            renderer.Draw(*importedMesh, materialModel);
         }
 
         window.SwapBuffers();
