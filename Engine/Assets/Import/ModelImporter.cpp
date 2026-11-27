@@ -49,6 +49,15 @@ namespace
             result.DiffuseColor = glm::vec3(diffuse.r, diffuse.g, diffuse.b);
         }
 
+        float metallic = 0.0f;
+        float roughness = 0.5f;
+        const bool hasMetallic = material->Get(AI_MATKEY_METALLIC_FACTOR, metallic) == AI_SUCCESS;
+        const bool hasRoughness = material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == AI_SUCCESS;
+
+        result.HasPBR = hasMetallic && hasRoughness;
+        result.Metallic = hasMetallic ? glm::clamp(metallic, 0.0f, 1.0f) : 0.0f;
+        result.Roughness = hasRoughness ? glm::clamp(roughness, 0.04f, 1.0f) : 0.5f;
+
         aiString texturePath;
         const unsigned int count = material->GetTextureCount(aiTextureType_DIFFUSE);
         if (count > 0 && material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)

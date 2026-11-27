@@ -1,5 +1,6 @@
 #include "Material.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -30,6 +31,9 @@ void Material::Bind() const
     }
 
     m_Shader->SetVec3("u_BaseColor", m_BaseColor);
+    m_Shader->SetInt("u_UsePBR", m_UsePBR ? 1 : 0);
+    m_Shader->SetFloat("u_Metallic", m_Metallic);
+    m_Shader->SetFloat("u_Roughness", m_Roughness);
 }
 
 void Material::SetBaseColor(const glm::vec3& color)
@@ -40,6 +44,36 @@ void Material::SetBaseColor(const glm::vec3& color)
 const glm::vec3& Material::GetBaseColor() const
 {
     return m_BaseColor;
+}
+
+void Material::SetMetallic(float value)
+{
+    m_Metallic = std::clamp(value, 0.0f, 1.0f);
+}
+
+float Material::GetMetallic() const
+{
+    return m_Metallic;
+}
+
+void Material::SetRoughness(float value)
+{
+    m_Roughness = std::clamp(value, 0.04f, 1.0f);
+}
+
+float Material::GetRoughness() const
+{
+    return m_Roughness;
+}
+
+void Material::SetUsePBR(bool value)
+{
+    m_UsePBR = value;
+}
+
+bool Material::GetUsePBR() const
+{
+    return m_UsePBR;
 }
 
 std::shared_ptr<Shader> Material::GetShader() const
