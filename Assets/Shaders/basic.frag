@@ -18,13 +18,30 @@ uniform vec3 u_PointLightColor[MAX_POINT_LIGHTS];
 
 out vec4 FragColor;
 
+vec3 srgbToLinear(vec3 color)
+{
+    vec3 value = clamp(color, 0.0, 1.0);
+    return mix(value / 12.92,
+               pow((value + 0.055) / 1.055, vec3(2.4)),
+               step(vec3(0.04045), value));
+}
+
+vec3 linearToSrgb(vec3 color)
+{
+    vec3 value = clamp(color, 0.0, 1.0);
+    return mix(value * 12.92,
+               1.055 * pow(value, vec3(1.0 / 2.4)) - 0.055,
+               step(vec3(0.0031308), value));
+}
+
 void main()
 {
-    vec3 surfaceColor = u_BaseColor;
+    vec3 baseColorLinear = srgbToLinear(u_BaseColor);
+    vec3 surfaceColor = baseColorLinear;
 
     if (u_UseTexture == 1)
     {
-        surfaceColor = texture(u_TextureSampler, v_UV).rgb * u_BaseColor;
+        surfaceColor = texture(u_TextureSampler, v_UV).rgb * baseColorLinear;
     }
 
     const float ambientStrength = 0.25;
@@ -69,11 +86,11 @@ void main()
                 pow(max(dot(N, pointH), 0.0), shininess) * specularStrength * attenuation;
         }
 
-        pointContribution += u_PointLightColor[i] * (pointDiffuse + pointSpecular);
+        pointContribution += srgbToLinear(u_PointLightColor[i]) * (pointDiffuse + pointSpecular);
     }
 
-    FragColor = vec4(
-        surfaceColor * (ambientStrength + diffuse) + vec3(specular) + pointContribution,
-        1.0
-    );
+    vec3 linearColor =
+        surfaceColor * (ambientStrength + diffuse) + vec3(specular) + pointContribution;
+
+    FragColor = vec4(linearToSrgb(linearColor), 1.0);
 }

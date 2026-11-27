@@ -12,7 +12,7 @@
 class Texture2D : public Resource
 {
 public:
-    explicit Texture2D(const std::filesystem::path& path);
+    explicit Texture2D(const std::filesystem::path& path, bool sRGB = true);
     ~Texture2D() override;
 
     Texture2D(const Texture2D&) = delete;

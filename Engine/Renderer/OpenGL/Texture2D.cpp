@@ -10,7 +10,7 @@
 #include <string>
 #include <filesystem>
 
-Texture2D::Texture2D(const std::filesystem::path& path)
+Texture2D::Texture2D(const std::filesystem::path& path, bool sRGB)
     : Resource(std::filesystem::weakly_canonical(path).string())
 {
     const std::string canonical = std::filesystem::weakly_canonical(path).string();
@@ -32,7 +32,10 @@ Texture2D::Texture2D(const std::filesystem::path& path)
         throw std::runtime_error(std::string("Failed to load image: ") + canonical);
     }
 
-    const GLenum internalFormat = (channels == 1) ? GL_R8 : (channels == 3) ? GL_RGB8 : GL_RGBA8;
+    const GLenum internalFormat = (channels == 1)
+        ? GL_R8
+        : (sRGB ? (channels == 3 ? GL_SRGB8 : GL_SRGB8_ALPHA8)
+                : (channels == 3 ? GL_RGB8 : GL_RGBA8));
     const GLenum sourceFormat = (channels == 1) ? GL_RED : (channels == 3) ? GL_RGB : GL_RGBA;
 
     glBindTexture(GL_TEXTURE_2D, 0);
