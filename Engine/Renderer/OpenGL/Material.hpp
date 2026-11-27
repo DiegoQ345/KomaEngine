@@ -29,6 +29,9 @@ public:
     void SetUseNormalMap(bool value);
     bool GetUseNormalMap() const;
 
+    void SetUnlitTest(bool value);
+    bool GetUnlitTest() const;
+
     std::shared_ptr<Shader> GetShader() const;
     std::shared_ptr<Texture2D> GetTexture() const;
 
@@ -41,4 +44,5 @@ private:
     bool m_UsePBR = false;
     std::shared_ptr<Texture2D> m_NormalTexture;
     bool m_UseNormalMap = false;
+    bool m_UnlitTest = false;
 };

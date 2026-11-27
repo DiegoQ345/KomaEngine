@@ -1,4 +1,4 @@
-﻿#include "Application.hpp"
+#include "Application.hpp"
 
 #include "Assets/AssetManager.hpp"
 #include "Assets/Import/ModelImporter.hpp"
@@ -17,6 +17,7 @@
 #include "Renderer/OpenGL/ModelRenderer.hpp"
 #include "Renderer/OpenGL/Renderer.hpp"
 #include "Renderer/OpenGL/ShadowMap.hpp"
+#include "Renderer/OpenGL/Skybox.hpp"
 #include "Renderer/OpenGL/Texture2D.hpp"
 
 #include <glm/vec3.hpp>
@@ -104,6 +105,12 @@ void Application::Run()
         AssetPath("Shaders/shadow_depth.vert").string().c_str(),
         AssetPath("Shaders/shadow_depth.frag").string().c_str()
     );
+
+    auto skyboxShader = assets.LoadShader(
+        AssetPath("Shaders/procedural_skybox.vert").string().c_str(),
+        AssetPath("Shaders/procedural_skybox.frag").string().c_str()
+    );
+    Skybox skybox(skyboxShader);
 
     const std::string texturePath = AssetPath("Textures/pattern.png").string();
     auto texture = assets.LoadTexture2D(texturePath);
@@ -391,6 +398,11 @@ void Application::Run()
         characterRenderer.DrawDepth(scene.GetWorldMatrix(characterInst), *depthShader, renderer);
         shadowMap.End();
 
+        shader->Bind();
+        shader->SetBool("u_ToneMappingEnabled", true);
+        skyboxShader->Bind();
+        skyboxShader->SetBool("u_ToneMappingEnabled", true);
+
         const glm::mat4 viewProjection = camera.GetProjectionMatrix() * camera.GetViewMatrix();
 
         renderer.SetClearColor(0.08f, 0.10f, 0.15f, 1.0f);
@@ -400,6 +412,7 @@ void Application::Run()
         shader->SetMat4("u_ViewProjection", viewProjection);
         shader->SetVec3("u_CameraPosition", camera.GetPosition());
         shader->SetVec3("u_LightDirection", lightDirection);
+        shader->SetVec3("u_AmbientColor", skybox.GetAmbientColor());
         shader->SetMat4("u_LightSpaceMatrix", shadowMap.GetLightSpaceMatrix());
         shader->SetInt("u_ShadowEnabled", 1);
         shader->SetFloat("u_ShadowBias", shadowMap.GetBias());
@@ -424,7 +437,6 @@ void Application::Run()
         for (const GameObject* object : { &cubeLeft, &cubeRight })
         {
             const Material& material = (object == &cubeLeft) ? materialLeft : materialRight;
-
             shader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
             renderer.Draw(cube, material);
         }
@@ -432,6 +444,8 @@ void Application::Run()
         materialRendererA.Draw(scene.GetWorldMatrix(materialInstLeft), renderer);
         materialRendererB.Draw(scene.GetWorldMatrix(materialInstRight), renderer);
         characterRenderer.Draw(scene.GetWorldMatrix(characterInst), renderer);
+
+        skybox.Draw(camera, renderer, m_Time);
 
         window.SwapBuffers();
     }

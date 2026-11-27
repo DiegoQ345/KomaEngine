@@ -26,11 +26,13 @@ add_library(Engine STATIC
     Platform/Window/Window.cpp
     Renderer/OpenGL/IndexBuffer.cpp
     Renderer/OpenGL/Material.cpp
+    Renderer/OpenGL/CubeMapTexture.cpp
     Renderer/OpenGL/Mesh.cpp
     Renderer/OpenGL/ModelRenderer.cpp
     Renderer/OpenGL/Renderer.cpp
     Renderer/OpenGL/Shader.cpp
     Renderer/OpenGL/ShadowMap.cpp
+    Renderer/OpenGL/Skybox.cpp
     Renderer/OpenGL/Texture2D.cpp
     Renderer/OpenGL/VertexArray.cpp
     Renderer/OpenGL/VertexBuffer.cpp

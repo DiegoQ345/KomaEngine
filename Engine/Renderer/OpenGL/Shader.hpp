@@ -28,6 +28,7 @@ public:
     void SetVec3(const char* name, const glm::vec3& value) const;
     void SetInt(const char* name, int value) const;
     void SetFloat(const char* name, float value) const;
+    void SetBool(const char* name, bool value) const;
 
 private:
     GLint GetUniformLocation(const char* name) const;

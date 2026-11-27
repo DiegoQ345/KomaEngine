@@ -35,6 +35,7 @@ void Material::Bind() const
     m_Shader->SetFloat("u_Metallic", m_Metallic);
     m_Shader->SetFloat("u_Roughness", m_Roughness);
     m_Shader->SetInt("u_UseNormalMap", m_UseNormalMap ? 1 : 0);
+    m_Shader->SetInt("u_UnlitTest", m_UnlitTest ? 1 : 0);
 
     if (m_NormalTexture)
     {
@@ -101,6 +102,16 @@ void Material::SetUseNormalMap(bool value)
 bool Material::GetUseNormalMap() const
 {
     return m_UseNormalMap;
+}
+
+void Material::SetUnlitTest(bool value)
+{
+    m_UnlitTest = value;
+}
+
+bool Material::GetUnlitTest() const
+{
+    return m_UnlitTest;
 }
 
 std::shared_ptr<Shader> Material::GetShader() const

@@ -36,6 +36,22 @@ std::shared_ptr<Texture2D> AssetManager::LoadTexture2D(
     });
 }
 
+std::shared_ptr<CubeMapTexture> AssetManager::LoadCubeMap(const CubeMapTexture::Faces& faces)
+{
+    std::string key = "cubemap|";
+    CubeMapTexture::Faces resolved;
+
+    for (std::size_t i = 0; i < faces.size(); i++)
+    {
+        resolved[i] = AssetPath(faces[i].string().c_str());
+        key += std::filesystem::weakly_canonical(resolved[i]).string() + "|";
+    }
+
+    return LoadCached<CubeMapTexture>(key, [&] {
+        return std::make_shared<CubeMapTexture>(resolved);
+    });
+}
+
 void AssetManager::ReleaseAll()
 {
     m_Resources.clear();

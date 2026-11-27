@@ -1,8 +1,11 @@
 #pragma once
 
 #include "Assets/Resource.hpp"
+#include "Renderer/OpenGL/CubeMapTexture.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
 #include "Renderer/OpenGL/Texture2D.hpp"
+
+#include <array>
 
 #include <filesystem>
 #include <memory>
@@ -23,6 +26,8 @@ public:
         const std::filesystem::path& path,
         bool sRGB = true
     );
+
+    std::shared_ptr<CubeMapTexture> LoadCubeMap(const CubeMapTexture::Faces& faces);
 
     void ReleaseAll();
 

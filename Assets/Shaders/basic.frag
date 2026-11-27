@@ -13,6 +13,7 @@ uniform int u_UseTexture;
 
 uniform vec3 u_CameraPosition;
 uniform vec3 u_LightDirection;
+uniform vec3 u_AmbientColor;
 
 uniform int u_UsePBR;
 uniform float u_Metallic;
@@ -112,17 +113,38 @@ vec3 PBRContribution(vec3 albedo, vec3 N, vec3 V, vec3 L, vec3 radiance,
     return (kD * albedo / 3.14159265 + specular) * radiance * NdotL;
 }
 
+uniform bool u_ToneMappingEnabled;
+uniform bool u_UnlitTest;
+
+vec3 reinhardToneMapping(vec3 color)
+{
+    return color / (vec3(1.0) + color);
+}
+
 void main()
 {
-    vec3 baseColorLinear = srgbToLinear(u_BaseColor);
-    vec3 albedo = baseColorLinear;
+    vec3 albedo;
 
-    if (u_UseTexture == 1)
-    {
-        albedo = texture(u_TextureSampler, v_UV).rgb * baseColorLinear;
+    if (u_UnlitTest) {
+        albedo = u_BaseColor;
+    } else {
+        vec3 baseColorLinear = srgbToLinear(u_BaseColor);
+        albedo = baseColorLinear;
+        if (u_UseTexture == 1) {
+            albedo = texture(u_TextureSampler, v_UV).rgb * baseColorLinear;
+        }
     }
 
-    const float ambientStrength = 0.25;
+    if (u_UnlitTest) {
+        vec3 color = albedo;
+        if (u_ToneMappingEnabled) {
+            FragColor = vec4(linearToSrgb(reinhardToneMapping(color)), 1.0);
+        } else {
+            FragColor = vec4(linearToSrgb(color), 1.0);
+        }
+        return;
+    }
+
     const float specularStrength = 0.8;
     const float shininess = 16.0;
 
@@ -187,7 +209,7 @@ void main()
         float metallic = clamp(u_Metallic, 0.0, 1.0);
         float roughness = clamp(u_Roughness, 0.04, 1.0);
 
-        finalColor = albedo * ambientStrength * (1.0 - metallic);
+        finalColor = albedo * u_AmbientColor * (1.0 - metallic);
         finalColor += PBRContribution(
             albedo, N, V, L, vec3(shadow), metallic, roughness
         );
@@ -211,9 +233,16 @@ void main()
     }
     else
     {
-        finalColor = albedo * (ambientStrength + diffuse * shadow)
+        finalColor = albedo * (u_AmbientColor + diffuse * shadow)
                    + vec3(specular * shadow) + pointContribution;
     }
 
-    FragColor = vec4(linearToSrgb(finalColor), 1.0);
+    if (u_ToneMappingEnabled) {
+        vec3 mappedColor = reinhardToneMapping(finalColor);
+        FragColor = vec4(linearToSrgb(mappedColor), 1.0);
+    }
+    else
+    {
+        FragColor = vec4(linearToSrgb(finalColor), 1.0);
+    }
 }

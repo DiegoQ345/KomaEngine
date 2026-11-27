@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Anime Skybox & Living Environment Test</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #1e62d0; font-family: system-ui, sans-serif; }
+    #ui {
+      position: absolute; top: 14px; left: 14px; color: #fff;
+      background: rgba(15, 25, 45, 0.65); backdrop-filter: blur(6px);
+      padding: 12px 16px; border-radius: 10px; font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.18); pointer-events: auto;
+    }
+    #ui h3 { margin: 0 0 8px 0; font-size: 14px; letter-spacing: 0.4px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 5px 0; }
+    input[type=range] { width: 120px; accent-color: #60c5ff; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <h3>Anime Skybox &amp; Living World</h3>
+    <div class="row"><span>Elevación Sol</span><input id="sunEl" type="range" min="0.02" max="1.2" step="0.01" value="0.32"></div>
+    <div class="row"><span>Velocidad Nubes</span><input id="cloudSpd" type="range" min="0.0" max="3.0" step="0.05" value="1.0"></div>
+    <div class="row"><span>Viento Hierba</span><input id="windStr" type="range" min="0.0" max="2.5" step="0.05" value="1.0"></div>
+    <div style="margin-top:8px;opacity:0.8;font-size:11px;">Arrastra para rotar cámara · Rueda para zoom</div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 3.2, 12);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 2.2, 0);
+    controls.maxPolarAngle = Math.PI * 0.495;
+    controls.minDistance = 4;
+    controls.maxDistance = 35;
+    controls.update();
+
+    const uniforms = {
+      uTime: { value: 0 },
+      uSunDir: { value: new THREE.Vector3(0.4, 0.32, -0.85).normalize() },
+      uCloudSpeed: { value: 1.0 },
+      uWind: { value: 1.0 }
+    };
+
+    // 1. PROCEDURAL ANIME SKYBOX (Sky gradient, stylized clouds, sun halo, 3 mountain layers)
+    const skyVertex = /* glsl */`
+      varying vec3 vWorldDir;
+      void main() {
+        vec4 worldPos = modelMatrix * vec4(position, 1.0);
+        vWorldDir = normalize(worldPos.xyz);
+        gl_Position = projectionMatrix * viewMatrix * worldPos;
+      }
+    `;
+
+    const skyFragment = /* glsl */`
+      uniform float uTime;
+      uniform vec3 uSunDir;
+      uniform float uCloudSpeed;
+      varying vec3 vWorldDir;
+
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+          mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+          u.y
+        );
+      }
+
+      float fbm(vec2 p) {
+        float v = 0.0;
+        float a = 0.5;
+        mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+        for (int i = 0; i < 5; i++) {
+          v += a * noise(p);
+          p = rot * p * 2.03;
+          a *= 0.5;
+        }
+        return v;
+      }
+
+      float mountainRidge(float x, float freq, float seed) {
+        float n = sin(x * freq + seed) * 0.5 + 0.5;
+        n += (noise(vec2(x * freq * 1.7, seed)) - 0.5) * 0.65;
+        n += (noise(vec2(x * freq * 4.2, seed + 3.1)) - 0.5) * 0.22;
+        return clamp(n, 0.0, 1.5);
+      }
+
+      void main() {
+        vec3 dir = normalize(vWorldDir);
+        float y = dir.y;
+        vec3 sunDir = normalize(uSunDir);
+
+        // Zenith to Horizon Anime Sky Gradient
+        vec3 zenithCol  = vec3(0.09, 0.36, 0.82);
+        vec3 midSkyCol  = vec3(0.26, 0.65, 0.96);
+        vec3 horizonCol = vec3(0.72, 0.93, 1.00);
+
+        float t1 = smoothstep(0.0, 0.35, max(y, 0.0));
+        float t2 = smoothstep(0.25, 0.92, max(y, 0.0));
+        vec3 col = mix(horizonCol, midSkyCol, t1);
+        col = mix(col, zenithCol, t2);
+
+        // Sun disc + Mie scattering glow
+        float sunCos = max(dot(dir, sunDir), 0.0);
+        float sunHalo = pow(sunCos, 10.0) * 0.35 + pow(sunCos, 90.0) * 0.65;
+        float sunDisc = smoothstep(0.9982, 0.9993, sunCos);
+        col += vec3(1.0, 0.93, 0.78) * sunHalo;
+        col = mix(col, vec3(1.5, 1.45, 1.3), sunDisc);
+
+        // Stylized Cumulus Clouds (projected dome)
+        if (y > 0.015) {
+          vec2 uv = dir.xz / (y + 0.16);
+          float t = uTime * 0.035 * uCloudSpeed;
+
+          // High wispy cirrus
+          float cirrus = fbm(uv * 1.4 + vec2(t * 0.6, t * 0.2));
+          float cirrusMask = smoothstep(0.56, 0.82, cirrus) * smoothstep(0.02, 0.25, y);
+          col = mix(col, vec3(0.95, 0.98, 1.0), cirrusMask * 0.35);
+
+          // Main anime cumulus clouds with cel-shaded underside & bright rim
+          vec2 cuv = uv * 0.85 + vec2(t, t * 0.35);
+          float cBase = fbm(cuv);
+          float cDetail = fbm(cuv * 2.4 - vec2(t * 0.5, 0.0));
+          float cloudDensity = cBase * 0.78 + cDetail * 0.28;
+
+          float cloudAlpha = smoothstep(0.53, 0.59, cloudDensity) * smoothstep(0.02, 0.16, y);
+          // Sample slightly toward sun for cel-shaded cloud volume
+          float cSunSample = fbm(cuv + sunDir.xz * 0.08);
+          float litFactor = smoothstep(0.46, 0.64, cSunSample);
+
+          vec3 cloudShadow = mix(vec3(0.56, 0.68, 0.88), vec3(0.75, 0.84, 0.96), litFactor);
+          vec3 cloudLight  = vec3(1.02, 1.01, 0.99) + vec3(0.18, 0.14, 0.06) * pow(sunCos, 4.0);
+          vec3 cloudCol = mix(cloudShadow, cloudLight, smoothstep(0.35, 0.72, litFactor));
+
+          col = mix(col, cloudCol, cloudAlpha * 0.94);
+        }
+
+        // 3 Layered Distant Mountain Ranges with Atmospheric Perspective
+        float azimuth = atan(dir.z, dir.x);
+
+        // Layer 1: Far pale blue peaks
+        float m1 = mountainRidge(azimuth, 3.0, 1.2) * 0.11 + 0.01;
+        if (y < m1 && y > -0.05) {
+          float snow = smoothstep(m1 - 0.025, m1, y);
+          vec3 m1Col = mix(vec3(0.50, 0.74, 0.95), vec3(0.84, 0.94, 1.0), snow * 0.65);
+          col = mix(col, m1Col, 0.88);
+        }
+
+        // Layer 2: Mid-distance indigo-teal ridge + moving cloud shadow
+        float m2 = mountainRidge(azimuth, 4.5, 4.7) * 0.075 + 0.002;
+        if (y < m2 && y > -0.05) {
+          float cloudShadow = smoothstep(0.42, 0.65, noise(vec2(azimuth * 5.0 + uTime * 0.05 * uCloudSpeed, 2.0)));
+          vec3 m2Col = mix(vec3(0.28, 0.52, 0.78), vec3(0.38, 0.64, 0.86), cloudShadow);
+          col = m2Col;
+        }
+
+        // Layer 3: Closer forested hills
+        float m3 = mountainRidge(azimuth, 7.0, 8.4) * 0.042 - 0.004;
+        if (y < m3 && y > -0.05) {
+          vec3 m3Col = vec3(0.18, 0.44, 0.56);
+          col = m3Col;
+        }
+
+        // Horizon atmospheric mist blend
+        float mist = 1.0 - smoothstep(-0.01, 0.045, abs(y));
+        col = mix(col, horizonCol, mist * 0.45);
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    const skyGeo = new THREE.SphereGeometry(400, 48, 32);
+    const skyMat = new THREE.ShaderMaterial({
+      vertexShader: skyVertex,
+      fragmentShader: skyFragment,
+      uniforms,
+      side: THREE.BackSide,
+      depthWrite: false
+    });
+    scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+    // Lighting matching the skybox
+    const sunLight = new THREE.DirectionalLight(0xfff4dc, 2.2);
+    sunLight.position.copy(uniforms.uSunDir.value).multiplyScalar(50);
+    scene.add(sunLight);
+    scene.add(new THREE.HemisphereLight(0x88ccff, 0x3b7a45, 0.95));
+
+    // 2. STYLIZED TERRAIN + REFLECTIVE LAKE POND (to test skybox reflection!)
+    const groundGeo = new THREE.PlaneGeometry(140, 140, 96, 96);
+    groundGeo.rotateX(-Math.PI / 2);
+    const pos = groundGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getZ(i);
+      const distPond = Math.hypot(x - 5.5, z + 3.5);
+      const hill = Math.sin(x * 0.12) * Math.cos(z * 0.12) * 0.65;
+      const basin = distPond < 6.5 ? -0.65 * (1.0 - distPond / 6.5) : 0.0;
+      pos.setY(i, hill + basin);
+    }
+    groundGeo.computeVertexNormals();
+
+    const groundMat = new THREE.MeshStandardMaterial({
+      color: 0x4ca64c,
+      roughness: 0.9,
+      metalness: 0.0
+    });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    scene.add(ground);
+
+    // Reflective Water Surface reflecting the procedural skybox
+    const waterGeo = new THREE.CircleGeometry(6.2, 48);
+    waterGeo.rotateX(-Math.PI / 2);
+    const waterMat = new THREE.ShaderMaterial({
+      uniforms,
+      transparent: true,
+      vertexShader: /* glsl */`
+        varying vec3 vWorldPos;
+        void main() {
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: /* glsl */`
+        uniform float uTime;
+        uniform vec3 uSunDir;
+        varying vec3 vWorldPos;
+        void main() {
+          vec3 V = normalize(cameraPosition - vWorldPos);
+          float ripple = sin(vWorldPos.x * 4.5 + uTime * 2.2) * cos(vWorldPos.z * 4.5 - uTime * 1.8) * 0.025;
+          vec3 N = normalize(vec3(ripple, 1.0, ripple));
+          vec3 R = reflect(-V, N);
+          float skyT = clamp(R.y, 0.0, 1.0);
+          vec3 skyRefl = mix(vec3(0.72, 0.93, 1.0), vec3(0.14, 0.48, 0.88), pow(skyT, 0.6));
+          float sunSpec = pow(max(dot(R, normalize(uSunDir)), 0.0), 140.0);
+          vec3 col = mix(vec3(0.15, 0.55, 0.72), skyRefl, 0.78) + vec3(1.2, 1.15, 1.0) * sunSpec;
+          gl_FragColor = vec4(col, 0.9);
+        }
+      `
+    });
+    const water = new THREE.Mesh(waterGeo, waterMat);
+    water.position.set(5.5, -0.18, -3.5);
+    scene.add(water);
+
+    // 3. INSTANCED ANIMATED ANIME GRASS BLADES (GPU Wind)
+    const bladeCount = 14000;
+    const bladeGeo = new THREE.ConeGeometry(0.045, 0.55, 3, 1);
+    bladeGeo.translate(0, 0.275, 0);
+    const grassMat = new THREE.ShaderMaterial({
+      uniforms,
+      side: THREE.DoubleSide,
+      vertexShader: /* glsl */`
+        uniform float uTime;
+        uniform float uWind;
+        varying float vHeight;
+        void main() {
+          vHeight = position.y / 0.55;
+          vec4 worldBase = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          float sway = sin(uTime * 2.4 + worldBase.x * 0.6 + worldBase.z * 0.5) * 0.16 * uWind;
+          vec3 pos = position;
+          pos.x += sway * vHeight * vHeight;
+          pos.z += sway * 0.4 * vHeight * vHeight;
+          gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying float vHeight;
+        void main() {
+          vec3 rootCol = vec3(0.24, 0.60, 0.27);
+          vec3 tipCol  = vec3(0.58, 0.88, 0.34);
+          gl_FragColor = vec4(mix(rootCol, tipCol, vHeight), 1.0);
+        }
+      `
+    });
+
+    const grassMesh = new THREE.InstancedMesh(bladeGeo, grassMat, bladeCount);
+    const dummy = new THREE.Object3D();
+    let idx = 0;
+    for (let i = 0; i < bladeCount; i++) {
+      const x = (Math.random() - 0.5) * 42;
+      const z = (Math.random() - 0.5) * 42;
+      if (Math.hypot(x - 5.5, z + 3.5) < 6.4) continue; // keep out of pond
+      const y = Math.sin(x * 0.12) * Math.cos(z * 0.12) * 0.65;
+      dummy.position.set(x, y - 0.03, z);
+      dummy.rotation.y = Math.random() * Math.PI * 2;
+      const s = 0.7 + Math.random() * 0.85;
+      dummy.scale.set(s, s, s);
+      dummy.updateMatrix();
+      grassMesh.setMatrixAt(idx++, dummy.matrix);
+    }
+    grassMesh.count = idx;
+    scene.add(grassMesh);
+
+    // 4. FLOATING POLLEN / PETAL PARTICLES FOR LIFE
+    const pCount = 260;
+    const pGeo = new THREE.BufferGeometry();
+    const pPos = new Float32Array(pCount * 3);
+    for (let i = 0; i < pCount; i++) {
+      pPos[i * 3]     = (Math.random() - 0.5) * 26;
+      pPos[i * 3 + 1] = 0.3 + Math.random() * 5.0;
+      pPos[i * 3 + 2] = (Math.random() - 0.5) * 26;
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({ color: 0xfff8d6, size: 0.08, transparent: true, opacity: 0.85 });
+    const particles = new THREE.Points(pGeo, pMat);
+    scene.add(particles);
+
+    // UI Controls
+    document.getElementById('sunEl').addEventListener('input', (e) => {
+      const el = parseFloat(e.target.value);
+      uniforms.uSunDir.value.set(0.4, el, -0.85).normalize();
+      sunLight.position.copy(uniforms.uSunDir.value).multiplyScalar(50);
+    });
+    document.getElementById('cloudSpd').addEventListener('input', (e) => {
+      uniforms.uCloudSpeed.value = parseFloat(e.target.value);
+    });
+    document.getElementById('windStr').addEventListener('input', (e) => {
+      uniforms.uWind.value = parseFloat(e.target.value);
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = clock.getDelta();
+      uniforms.uTime.value += dt;
+
+      const arr = particles.geometry.attributes.position.array;
+      for (let i = 0; i < pCount; i++) {
+        arr[i * 3] += dt * 0.45 * uniforms.uWind.value;
+        arr[i * 3 + 1] += Math.sin(uniforms.uTime.value + i) * dt * 0.15;
+        if (arr[i * 3] > 13) arr[i * 3] = -13;
+      }
+      particles.geometry.attributes.position.needsUpdate = true;
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
