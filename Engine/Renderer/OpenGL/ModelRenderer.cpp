@@ -2,6 +2,7 @@
 
 #include "Material.hpp"
 #include "Renderer.hpp"
+#include "Shader.hpp"
 
 #include <glm/glm.hpp>
 
@@ -50,5 +51,42 @@ void ModelRenderer::DrawNode(
     for (const ModelNode& child : node.Children)
     {
         DrawNode(child, world, rootTransform, renderer);
+    }
+}
+
+void ModelRenderer::DrawDepth(
+    const glm::mat4& worldTransform,
+    const Shader& shader,
+    Renderer& renderer
+) const
+{
+    shader.Bind();
+    DrawDepthNode(m_Model->RootNode, glm::mat4(1.0f), worldTransform, shader, renderer);
+}
+
+void ModelRenderer::DrawDepthNode(
+    const ModelNode& node,
+    const glm::mat4& parentWorld,
+    const glm::mat4& rootTransform,
+    const Shader& shader,
+    Renderer& renderer
+) const
+{
+    const glm::mat4 world = parentWorld * node.LocalTransform;
+    const glm::mat4 finalTransform = rootTransform * world;
+
+    renderer.SetFrontFaceWinding(glm::determinant(finalTransform) < 0.0f);
+
+    for (const std::size_t meshIndex : node.MeshIndices)
+    {
+        shader.SetMat4("u_Model", finalTransform);
+        renderer.Draw(*m_Model->Meshes[meshIndex].Mesh);
+    }
+
+    renderer.SetFrontFaceWinding(false);
+
+    for (const ModelNode& child : node.Children)
+    {
+        DrawDepthNode(child, world, rootTransform, shader, renderer);
     }
 }

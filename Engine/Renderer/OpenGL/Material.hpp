@@ -24,6 +24,11 @@ public:
     void SetUsePBR(bool value);
     bool GetUsePBR() const;
 
+    void SetNormalTexture(std::shared_ptr<Texture2D> texture);
+    std::shared_ptr<Texture2D> GetNormalTexture() const;
+    void SetUseNormalMap(bool value);
+    bool GetUseNormalMap() const;
+
     std::shared_ptr<Shader> GetShader() const;
     std::shared_ptr<Texture2D> GetTexture() const;
 
@@ -34,4 +39,6 @@ private:
     float m_Metallic = 0.0f;
     float m_Roughness = 0.5f;
     bool m_UsePBR = false;
+    std::shared_ptr<Texture2D> m_NormalTexture;
+    bool m_UseNormalMap = false;
 };

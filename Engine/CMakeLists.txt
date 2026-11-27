@@ -30,6 +30,7 @@ add_library(Engine STATIC
     Renderer/OpenGL/ModelRenderer.cpp
     Renderer/OpenGL/Renderer.cpp
     Renderer/OpenGL/Shader.cpp
+    Renderer/OpenGL/ShadowMap.cpp
     Renderer/OpenGL/Texture2D.cpp
     Renderer/OpenGL/VertexArray.cpp
     Renderer/OpenGL/VertexBuffer.cpp

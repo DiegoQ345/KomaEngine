@@ -9,6 +9,7 @@
 
 class Material;
 class Renderer;
+class Shader;
 
 class ModelRenderer
 {
@@ -19,6 +20,7 @@ public:
     );
 
     void Draw(const glm::mat4& worldTransform, Renderer& renderer) const;
+    void DrawDepth(const glm::mat4& worldTransform, const Shader& shader, Renderer& renderer) const;
 
     const std::shared_ptr<const Model>& GetModel() const { return m_Model; }
     const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return m_Materials; }
@@ -28,6 +30,14 @@ private:
         const ModelNode& node,
         const glm::mat4& parentWorld,
         const glm::mat4& rootTransform,
+        Renderer& renderer
+    ) const;
+
+    void DrawDepthNode(
+        const ModelNode& node,
+        const glm::mat4& parentWorld,
+        const glm::mat4& rootTransform,
+        const Shader& shader,
         Renderer& renderer
     ) const;
 

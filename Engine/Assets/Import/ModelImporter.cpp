@@ -92,15 +92,56 @@ namespace
             }
         }
 
+        aiString normalPath;
+        const unsigned int normalCount = material->GetTextureCount(aiTextureType_NORMALS);
+        if (normalCount > 0 &&
+            material->GetTexture(aiTextureType_NORMALS, 0, &normalPath) == AI_SUCCESS)
+        {
+            const std::string raw = normalPath.C_Str();
+
+            if (!raw.empty() && raw[0] == '*')
+            {
+                Logger::Warning("ModelImporter: embedded normal textures are not supported: " + result.Name);
+            }
+            else if (!raw.empty())
+            {
+                std::filesystem::path path(raw);
+                path.make_preferred();
+
+                if (!path.is_absolute())
+                {
+                    path = modelDirectory / path;
+                }
+
+                std::error_code error;
+                const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+
+                if (!error && std::filesystem::exists(canonical))
+                {
+                    result.NormalMapPath = canonical;
+                }
+                else
+                {
+                    Logger::Warning("ModelImporter: normal texture not found: " + path.string());
+                }
+            }
+        }
+
         return result;
     }
 
-    std::shared_ptr<Mesh> ConvertMesh(const aiMesh* mesh)
+    std::shared_ptr<Mesh> ConvertMesh(const aiMesh* mesh, bool& hasTangents)
     {
+        hasTangents = false;
+
         if (mesh == nullptr || !mesh->HasPositions() || mesh->mNumVertices == 0)
         {
             return nullptr;
         }
+
+        const bool importTangents =
+            mesh->HasTangentsAndBitangents() && mesh->HasNormals() && mesh->HasTextureCoords(0);
+        hasTangents = importTangents;
 
         bool valid = true;
         std::vector<Mesh::Vertex> vertices;
@@ -134,10 +175,26 @@ namespace
                 uv = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
             }
 
+            glm::vec4 tangent(1.0f, 0.0f, 0.0f, 1.0f);
+            if (importTangents)
+            {
+                const aiVector3D& t = mesh->mTangents[i];
+                const aiVector3D& b = mesh->mBitangents[i];
+
+                const glm::vec3 n = normal;
+                const glm::vec3 tv(t.x, t.y, t.z);
+                const glm::vec3 bv(b.x, b.y, b.z);
+                const float handedness = glm::dot(glm::cross(n, tv), bv);
+                const float w = handedness >= 0.0f ? 1.0f : -1.0f;
+
+                tangent = glm::vec4(tv, w);
+            }
+
             vertices.push_back(Mesh::Vertex{
                 position.x, position.y, position.z,
                 normal.x, normal.y, normal.z,
-                uv.x, uv.y
+                uv.x, uv.y,
+                tangent.x, tangent.y, tangent.z, tangent.w
             });
         }
 
@@ -208,15 +265,21 @@ namespace
             std::size_t modelIndex = meshMap[sourceIndex];
             if (modelIndex == std::numeric_limits<std::size_t>::max())
             {
-                std::shared_ptr<Mesh> mesh = ConvertMesh(scene->mMeshes[sourceIndex]);
-                if (!mesh) continue;
+            bool hasTangents = false;
+            std::shared_ptr<Mesh> mesh = ConvertMesh(scene->mMeshes[sourceIndex], hasTangents);
+            if (!mesh) continue;
 
-                std::size_t materialIndex = scene->mMeshes[sourceIndex]->mMaterialIndex;
-                if (materialIndex >= model.Materials.size())
-                {
-                    Logger::Warning("ModelImporter: invalid material index, using first material");
-                    materialIndex = 0;
-                }
+            std::size_t materialIndex = scene->mMeshes[sourceIndex]->mMaterialIndex;
+            if (materialIndex >= model.Materials.size())
+            {
+                Logger::Warning("ModelImporter: invalid material index, using first material");
+                materialIndex = 0;
+            }
+
+            if (hasTangents)
+            {
+                model.Materials[materialIndex].HasTangents = true;
+            }
 
                 modelIndex = model.Meshes.size();
                 model.Meshes.push_back(ModelMesh{std::move(mesh), materialIndex});
@@ -245,6 +308,7 @@ Model ModelImporter::Load(const std::filesystem::path& path)
         aiProcess_Triangulate
         | aiProcess_GenNormals
         | aiProcess_JoinIdenticalVertices
+        | aiProcess_CalcTangentSpace
         | aiProcess_ValidateDataStructure
     );
 

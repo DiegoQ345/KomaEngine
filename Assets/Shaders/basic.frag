@@ -3,6 +3,9 @@
 in vec2 v_UV;
 in vec3 v_WorldPos;
 in vec3 v_Normal;
+in vec3 v_Tangent;
+in vec3 v_Bitangent;
+in vec4 v_PosLightSpace;
 
 uniform sampler2D u_TextureSampler;
 uniform vec3 u_BaseColor;
@@ -14,6 +17,14 @@ uniform vec3 u_LightDirection;
 uniform int u_UsePBR;
 uniform float u_Metallic;
 uniform float u_Roughness;
+
+uniform int u_UseNormalMap;
+uniform sampler2D u_NormalSampler;
+
+uniform sampler2DShadow u_ShadowMap;
+uniform mat4 u_LightSpaceMatrix;
+uniform int u_ShadowEnabled;
+uniform float u_ShadowBias;
 
 #define MAX_POINT_LIGHTS 4
 uniform int u_PointLightCount;
@@ -63,6 +74,24 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+float ComputeShadow(vec3 N, vec3 L)
+{
+    if (u_ShadowEnabled == 0) return 1.0;
+
+    vec3 projected = v_PosLightSpace.xyz / v_PosLightSpace.w;
+    projected = projected * 0.5 + 0.5;
+
+    if (projected.z < 0.0 || projected.z > 1.0 ||
+        projected.x < 0.0 || projected.x > 1.0 ||
+        projected.y < 0.0 || projected.y > 1.0)
+    {
+        return 1.0;
+    }
+
+    float bias = max(u_ShadowBias * 0.5, u_ShadowBias * (1.0 - max(dot(N, L), 0.0)));
+    return texture(u_ShadowMap, vec3(projected.xy, projected.z - bias));
+}
+
 vec3 PBRContribution(vec3 albedo, vec3 N, vec3 V, vec3 L, vec3 radiance,
                      float metallic, float roughness)
 {
@@ -98,7 +127,20 @@ void main()
     const float shininess = 16.0;
 
     vec3 N = normalize(v_Normal);
+    if (u_UseNormalMap == 1)
+    {
+        vec3 tangentSpaceNormal = texture(u_NormalSampler, v_UV).rgb * 2.0 - 1.0;
+        tangentSpaceNormal = normalize(tangentSpaceNormal);
+
+        vec3 T = normalize(v_Tangent - v_Normal * dot(v_Normal, v_Tangent));
+        vec3 B = normalize(v_Bitangent);
+        mat3 TBN = mat3(T, B, v_Normal);
+
+        N = normalize(TBN * tangentSpaceNormal);
+    }
+
     vec3 L = normalize(u_LightDirection);
+    float shadow = ComputeShadow(N, L);
     float diffuse = max(dot(N, L), 0.0);
 
     vec3 V = normalize(u_CameraPosition - v_WorldPos);
@@ -146,7 +188,9 @@ void main()
         float roughness = clamp(u_Roughness, 0.04, 1.0);
 
         finalColor = albedo * ambientStrength * (1.0 - metallic);
-        finalColor += PBRContribution(albedo, N, V, L, vec3(1.0), metallic, roughness);
+        finalColor += PBRContribution(
+            albedo, N, V, L, vec3(shadow), metallic, roughness
+        );
 
         for (int i = 0; i < pointLightCount; i++)
         {
@@ -167,7 +211,8 @@ void main()
     }
     else
     {
-        finalColor = albedo * (ambientStrength + diffuse) + vec3(specular) + pointContribution;
+        finalColor = albedo * (ambientStrength + diffuse * shadow)
+                   + vec3(specular * shadow) + pointContribution;
     }
 
     FragColor = vec4(linearToSrgb(finalColor), 1.0);

@@ -57,6 +57,14 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>&
         static_cast<GLsizei>(sizeof(Vertex)),
         offsetof(Vertex, nx)
     );
+    m_VertexArray.EnableVertexAttribute(
+        3,
+        4,
+        GL_FLOAT,
+        GL_FALSE,
+        static_cast<GLsizei>(sizeof(Vertex)),
+        offsetof(Vertex, tx)
+    );
     m_VertexArray.SetIndexBuffer(m_IndexBuffer);
 }
 

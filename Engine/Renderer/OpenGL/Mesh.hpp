@@ -15,12 +15,14 @@ public:
         float px, py, pz;
         float nx, ny, nz;
         float u, v;
+        float tx, ty, tz, tw;
     };
 
-    static_assert(sizeof(Vertex) == 32);
+    static_assert(sizeof(Vertex) == 48);
     static_assert(offsetof(Vertex, px) == 0);
     static_assert(offsetof(Vertex, nx) == 12);
     static_assert(offsetof(Vertex, u) == 24);
+    static_assert(offsetof(Vertex, tx) == 32);
 
     Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
     ~Mesh() = default;

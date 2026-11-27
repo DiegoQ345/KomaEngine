@@ -34,6 +34,13 @@ void Material::Bind() const
     m_Shader->SetInt("u_UsePBR", m_UsePBR ? 1 : 0);
     m_Shader->SetFloat("u_Metallic", m_Metallic);
     m_Shader->SetFloat("u_Roughness", m_Roughness);
+    m_Shader->SetInt("u_UseNormalMap", m_UseNormalMap ? 1 : 0);
+
+    if (m_NormalTexture)
+    {
+        m_NormalTexture->Bind(1);
+        m_Shader->SetInt("u_NormalSampler", 1);
+    }
 }
 
 void Material::SetBaseColor(const glm::vec3& color)
@@ -74,6 +81,26 @@ void Material::SetUsePBR(bool value)
 bool Material::GetUsePBR() const
 {
     return m_UsePBR;
+}
+
+void Material::SetNormalTexture(std::shared_ptr<Texture2D> texture)
+{
+    m_NormalTexture = std::move(texture);
+}
+
+std::shared_ptr<Texture2D> Material::GetNormalTexture() const
+{
+    return m_NormalTexture;
+}
+
+void Material::SetUseNormalMap(bool value)
+{
+    m_UseNormalMap = value;
+}
+
+bool Material::GetUseNormalMap() const
+{
+    return m_UseNormalMap;
 }
 
 std::shared_ptr<Shader> Material::GetShader() const

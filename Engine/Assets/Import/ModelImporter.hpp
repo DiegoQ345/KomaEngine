@@ -16,6 +16,8 @@ struct ImportedMaterial
     std::string Name;
     glm::vec3 DiffuseColor{1.0f};
     std::filesystem::path TexturePath;
+    std::filesystem::path NormalMapPath;
+    bool HasTangents = false;
     bool HasPBR = false;
     float Metallic = 0.0f;
     float Roughness = 0.5f;

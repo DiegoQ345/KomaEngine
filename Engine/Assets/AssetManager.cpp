@@ -22,13 +22,17 @@ std::shared_ptr<Shader> AssetManager::LoadShader(
     });
 }
 
-std::shared_ptr<Texture2D> AssetManager::LoadTexture2D(const std::filesystem::path& path)
+std::shared_ptr<Texture2D> AssetManager::LoadTexture2D(
+    const std::filesystem::path& path,
+    bool sRGB
+)
 {
     const std::filesystem::path resolved = AssetPath(path.string().c_str());
-    const std::string key = "texture|" + std::filesystem::weakly_canonical(resolved).string();
+    const std::string key = std::string("texture|") + (sRGB ? "srgb|" : "linear|") +
+        std::filesystem::weakly_canonical(resolved).string();
 
     return LoadCached<Texture2D>(key, [&] {
-        return std::make_shared<Texture2D>(resolved);
+        return std::make_shared<Texture2D>(resolved, sRGB);
     });
 }
 

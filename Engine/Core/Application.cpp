@@ -16,11 +16,13 @@
 #include "Renderer/OpenGL/Mesh.hpp"
 #include "Renderer/OpenGL/ModelRenderer.hpp"
 #include "Renderer/OpenGL/Renderer.hpp"
+#include "Renderer/OpenGL/ShadowMap.hpp"
 #include "Renderer/OpenGL/Texture2D.hpp"
 
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
 
@@ -89,6 +91,7 @@ void Application::Run()
 
     Renderer renderer;
     AssetManager assets;
+    ShadowMap shadowMap;
 
     const std::string vertexPath = AssetPath("Shaders/basic.vert").string();
     const std::string fragmentPath = AssetPath("Shaders/basic.frag").string();
@@ -96,6 +99,11 @@ void Application::Run()
     auto shader = assets.LoadShader(vertexPath, fragmentPath);
     shader->Bind();
     Logger::Info(std::string("Shader loaded successfully: ") + vertexPath);
+
+    auto depthShader = assets.LoadShader(
+        AssetPath("Shaders/shadow_depth.vert").string().c_str(),
+        AssetPath("Shaders/shadow_depth.frag").string().c_str()
+    );
 
     const std::string texturePath = AssetPath("Textures/pattern.png").string();
     auto texture = assets.LoadTexture2D(texturePath);
@@ -113,9 +121,9 @@ void Application::Run()
     materialRight.SetBaseColor(glm::vec3(0.05f, 0.15f, 1.0f));
 
     const std::vector<Mesh::Vertex> vertices{
-        {  0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.5f, 1.0f },
-        { -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f },
-        {  0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f }
+        {  0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.5f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f },
+        { -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f },
+        {  0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f }
     };
     const std::vector<unsigned int> indices{ 0, 1, 2 };
 
@@ -202,7 +210,8 @@ void Application::Run()
             cubeVertices.push_back(Mesh::Vertex{
                 corners[i].x, corners[i].y, corners[i].z,
                 normal.x, normal.y, normal.z,
-                faceUVs[i].x, faceUVs[i].y
+                faceUVs[i].x, faceUVs[i].y,
+                1.0f, 0.0f, 0.0f, 1.0f
             });
         }
 
@@ -228,6 +237,20 @@ void Application::Run()
 
     Mesh cube(cubeVertices, cubeIndices);
     Logger::Info("Cube created successfully");
+
+    const std::vector<Mesh::Vertex> groundVertices{
+        { -6.0f, -1.0f, -6.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f },
+        {  6.0f, -1.0f, -6.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f },
+        {  6.0f, -1.0f,  6.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f },
+        { -6.0f, -1.0f,  6.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f }
+    };
+    const std::vector<unsigned int> groundIndices{ 0, 2, 1, 0, 3, 2 };
+    Mesh groundMesh(groundVertices, groundIndices);
+
+    Material groundMaterial(shader, nullptr);
+    groundMaterial.SetBaseColor(glm::vec3(0.5f, 0.5f, 0.5f));
+    groundMaterial.SetMetallic(0.0f);
+    groundMaterial.SetRoughness(0.8f);
 
     Scene scene;
 
@@ -259,6 +282,11 @@ void Application::Run()
 
         auto importedMaterial = std::make_shared<Material>(shader, importedTexture);
         importedMaterial->SetBaseColor(info.DiffuseColor);
+        if (!info.NormalMapPath.empty() && info.HasTangents)
+        {
+            importedMaterial->SetNormalTexture(assets.LoadTexture2D(info.NormalMapPath, false));
+            importedMaterial->SetUseNormalMap(true);
+        }
         importedMaterials.push_back(std::move(importedMaterial));
     }
 
@@ -281,6 +309,11 @@ void Application::Run()
 
         auto characterMaterial = std::make_shared<Material>(shader, characterTexture);
         characterMaterial->SetBaseColor(info.DiffuseColor);
+        if (!info.NormalMapPath.empty() && info.HasTangents)
+        {
+            characterMaterial->SetNormalTexture(assets.LoadTexture2D(info.NormalMapPath, false));
+            characterMaterial->SetUseNormalMap(true);
+        }
         characterMaterials.push_back(std::move(characterMaterial));
     }
 
@@ -332,6 +365,32 @@ void Application::Run()
 
         Update(deltaTime);
 
+        const glm::vec3 lightDirection = glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f));
+        const glm::mat4 lightView = glm::lookAt(
+            lightDirection * 10.0f,
+            glm::vec3(0.0f, 0.0f, -2.0f),
+            glm::vec3(0.0f, 1.0f, 0.0f)
+        );
+        const glm::mat4 lightProjection = glm::ortho(-6.0f, 6.0f, -6.0f, 6.0f, 0.1f, 30.0f);
+        shadowMap.SetLightSpaceMatrix(lightProjection * lightView);
+
+        shadowMap.Begin();
+        depthShader->Bind();
+        depthShader->SetMat4("u_LightViewProjection", shadowMap.GetLightSpaceMatrix());
+
+        depthShader->SetMat4("u_Model", glm::mat4(1.0f));
+        renderer.Draw(mesh);
+        renderer.Draw(groundMesh);
+        for (const GameObject* object : { &cubeLeft, &cubeRight })
+        {
+            depthShader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
+            renderer.Draw(cube);
+        }
+        materialRendererA.DrawDepth(scene.GetWorldMatrix(materialInstLeft), *depthShader, renderer);
+        materialRendererB.DrawDepth(scene.GetWorldMatrix(materialInstRight), *depthShader, renderer);
+        characterRenderer.DrawDepth(scene.GetWorldMatrix(characterInst), *depthShader, renderer);
+        shadowMap.End();
+
         const glm::mat4 viewProjection = camera.GetProjectionMatrix() * camera.GetViewMatrix();
 
         renderer.SetClearColor(0.08f, 0.10f, 0.15f, 1.0f);
@@ -340,7 +399,12 @@ void Application::Run()
         shader->Bind();
         shader->SetMat4("u_ViewProjection", viewProjection);
         shader->SetVec3("u_CameraPosition", camera.GetPosition());
-        shader->SetVec3("u_LightDirection", glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f)));
+        shader->SetVec3("u_LightDirection", lightDirection);
+        shader->SetMat4("u_LightSpaceMatrix", shadowMap.GetLightSpaceMatrix());
+        shader->SetInt("u_ShadowEnabled", 1);
+        shader->SetFloat("u_ShadowBias", shadowMap.GetBias());
+        shadowMap.BindTexture(2);
+        shader->SetInt("u_ShadowMap", 2);
 
         const auto& pointLights = scene.GetPointLights();
         const int pointLightCount = std::min<std::size_t>(pointLights.size(), 4);
@@ -354,6 +418,7 @@ void Application::Run()
         }
 
         shader->SetMat4("u_Model", glm::mat4(1.0f));
+        renderer.Draw(groundMesh, groundMaterial);
         renderer.Draw(mesh, materialTriangle);
 
         for (const GameObject* object : { &cubeLeft, &cubeRight })

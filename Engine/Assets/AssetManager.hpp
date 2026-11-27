@@ -19,7 +19,10 @@ public:
         const std::filesystem::path& fragmentPath
     );
 
-    std::shared_ptr<Texture2D> LoadTexture2D(const std::filesystem::path& path);
+    std::shared_ptr<Texture2D> LoadTexture2D(
+        const std::filesystem::path& path,
+        bool sRGB = true
+    );
 
     void ReleaseAll();
 
