@@ -71,6 +71,7 @@ void Application::Run()
     Logger::Info(std::string("Renderer: ") + reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
     Camera camera;
+    camera.SetPosition(glm::vec3(0.0f, 0.5f, -1.0f));
 
     const auto updateViewport = [&window, &camera, this]() {
         int width = 0;
@@ -262,7 +263,7 @@ void Application::Run()
     }
 
     auto characterModel = std::make_shared<const Model>(
-        importer.Load(AssetPath("Models/2B nier automata.obj").string().c_str())
+        importer.Load(AssetPath("Models/Yanagi/Yanagi.fbx").string().c_str())
     );
     Logger::Info("Model loaded: " + characterModel->Name + " meshes=" +
                  std::to_string(characterModel->Meshes.size()) +
@@ -293,8 +294,8 @@ void Application::Run()
 
     auto& characterInst = scene.AddGameObject("CharacterInst");
     characterInst.GetTransform().SetPosition(glm::vec3(0.0f, 0.0f, -4.0f));
-    characterInst.GetTransform().SetRotationEulerDegrees(glm::vec3(-10.0f, 25.0f, 0.0f));
-    characterInst.GetTransform().SetScale(glm::vec3(2.2f, 2.2f, 2.2f));
+    characterInst.GetTransform().SetRotationEulerDegrees(glm::vec3(0.0f, 0.0f, 0.0f));
+    characterInst.GetTransform().SetScale(glm::vec3(0.01f, 0.01f, 0.01f));
 
     ModelRenderer materialRendererA(importedModel, importedMaterials);
     ModelRenderer materialRendererB(importedModel, importedMaterials);
