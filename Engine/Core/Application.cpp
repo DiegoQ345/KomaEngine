@@ -297,6 +297,11 @@ void Application::Run()
     characterInst.GetTransform().SetRotationEulerDegrees(glm::vec3(0.0f, 0.0f, 0.0f));
     characterInst.GetTransform().SetScale(glm::vec3(0.01f, 0.01f, 0.01f));
 
+    scene.AddPointLight({ glm::vec3(-2.0f, 2.0f, -3.0f), glm::vec3(0.8f, 0.30f, 0.10f) });
+    scene.AddPointLight({ glm::vec3( 2.0f, 1.5f, -4.0f), glm::vec3(0.15f, 0.35f, 0.8f) });
+    scene.AddPointLight({ glm::vec3( 0.0f, 1.0f, -1.5f), glm::vec3(0.20f, 0.7f, 0.25f) });
+    scene.AddPointLight({ glm::vec3( 0.0f, 3.0f, -6.0f), glm::vec3(0.5f, 0.20f, 0.7f) });
+
     ModelRenderer materialRendererA(importedModel, importedMaterials);
     ModelRenderer materialRendererB(importedModel, importedMaterials);
     ModelRenderer characterRenderer(characterModel, characterMaterials);
@@ -336,6 +341,18 @@ void Application::Run()
         shader->SetMat4("u_ViewProjection", viewProjection);
         shader->SetVec3("u_CameraPosition", camera.GetPosition());
         shader->SetVec3("u_LightDirection", glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f)));
+
+        const auto& pointLights = scene.GetPointLights();
+        const int pointLightCount = std::min<std::size_t>(pointLights.size(), 4);
+        shader->SetInt("u_PointLightCount", pointLightCount);
+        for (int i = 0; i < pointLightCount; i++)
+        {
+            const std::string positionName = "u_PointLightPosition[" + std::to_string(i) + "]";
+            const std::string colorName = "u_PointLightColor[" + std::to_string(i) + "]";
+            shader->SetVec3(positionName.c_str(), pointLights[i].Position);
+            shader->SetVec3(colorName.c_str(), pointLights[i].Color);
+        }
+
         shader->SetMat4("u_Model", glm::mat4(1.0f));
         renderer.Draw(mesh, materialTriangle);
 

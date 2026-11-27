@@ -11,6 +11,11 @@ uniform int u_UseTexture;
 uniform vec3 u_CameraPosition;
 uniform vec3 u_LightDirection;
 
+#define MAX_POINT_LIGHTS 4
+uniform int u_PointLightCount;
+uniform vec3 u_PointLightPosition[MAX_POINT_LIGHTS];
+uniform vec3 u_PointLightColor[MAX_POINT_LIGHTS];
+
 out vec4 FragColor;
 
 void main()
@@ -40,5 +45,35 @@ void main()
         specular = pow(max(dot(N, H), 0.0), shininess) * specularStrength;
     }
 
-    FragColor = vec4(surfaceColor * (ambientStrength + diffuse) + vec3(specular), 1.0);
+    vec3 pointContribution = vec3(0.0);
+    const int pointLightCount = min(u_PointLightCount, MAX_POINT_LIGHTS);
+
+    for (int i = 0; i < pointLightCount; i++)
+    {
+        const vec3 toLight = u_PointLightPosition[i] - v_WorldPos;
+        const float lightDistance = length(toLight);
+        if (lightDistance < 1e-4) continue;
+
+        const vec3 pointL = toLight / lightDistance;
+        const float attenuation =
+            1.0 / (1.0 + 0.09 * lightDistance + 0.032 * lightDistance * lightDistance);
+
+        const float pointDiffuse = max(dot(N, pointL), 0.0) * attenuation;
+
+        vec3 pointH = pointL + V;
+        float pointSpecular = 0.0;
+        if (pointDiffuse > 0.0 && dot(pointH, pointH) > 1e-6)
+        {
+            pointH = normalize(pointH);
+            pointSpecular =
+                pow(max(dot(N, pointH), 0.0), shininess) * specularStrength * attenuation;
+        }
+
+        pointContribution += u_PointLightColor[i] * (pointDiffuse + pointSpecular);
+    }
+
+    FragColor = vec4(
+        surfaceColor * (ambientStrength + diffuse) + vec3(specular) + pointContribution,
+        1.0
+    );
 }

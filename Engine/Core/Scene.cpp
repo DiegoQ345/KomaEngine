@@ -35,6 +35,16 @@ void Scene::Clear()
     m_GameObjects.clear();
 }
 
+void Scene::AddPointLight(PointLightData light)
+{
+    m_PointLights.push_back(std::move(light));
+}
+
+const std::vector<PointLightData>& Scene::GetPointLights() const
+{
+    return m_PointLights;
+}
+
 bool Scene::SetParent(GameObject& child, GameObject* parent)
 {
     if (parent == &child) return false;
