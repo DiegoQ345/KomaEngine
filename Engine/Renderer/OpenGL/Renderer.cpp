@@ -34,3 +34,8 @@ void Renderer::Draw(const Mesh& mesh, const Material& material) const
     material.Bind();
     mesh.Draw();
 }
+
+void Renderer::SetFrontFaceWinding(bool clockwise) const
+{
+    glFrontFace(clockwise ? GL_CW : GL_CCW);
+}

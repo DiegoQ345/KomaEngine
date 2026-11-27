@@ -13,12 +13,14 @@
 #include "Platform/Window/Window.hpp"
 #include "Renderer/OpenGL/Mesh.hpp"
 #include "Renderer/OpenGL/Material.hpp"
+#include "Renderer/OpenGL/Mesh.hpp"
+#include "Renderer/OpenGL/ModelRenderer.hpp"
 #include "Renderer/OpenGL/Renderer.hpp"
-#include "Renderer/OpenGL/Shader.hpp"
 #include "Renderer/OpenGL/Texture2D.hpp"
 
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include <glm/glm.hpp>
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
 
@@ -237,19 +239,16 @@ void Application::Run()
     cubeRight.GetTransform().SetScale(glm::vec3(0.7f, 0.7f, 0.7f));
 
     ModelImporter importer;
-    Model importedModel = importer.Load(AssetPath("Models/Tests/material_test.obj").string().c_str());
-    Logger::Info("Model loaded: " + importedModel.Name + " meshes=" +
-                 std::to_string(importedModel.Meshes.size()) +
-                 " materials=" + std::to_string(importedModel.Materials.size()));
-
-    Transform importedTransform;
-    importedTransform.SetPosition(glm::vec3(0.0f, 0.4f, -2.5f));
-    importedTransform.SetRotationEulerDegrees(glm::vec3(-25.0f, 35.0f, 0.0f));
-    importedTransform.SetScale(glm::vec3(1.6f, 1.6f, 1.6f));
+    auto importedModel = std::make_shared<const Model>(
+        importer.Load(AssetPath("Models/Tests/material_test.obj").string().c_str())
+    );
+    Logger::Info("Model loaded: " + importedModel->Name + " meshes=" +
+                 std::to_string(importedModel->Meshes.size()) +
+                 " materials=" + std::to_string(importedModel->Materials.size()));
 
     std::vector<std::shared_ptr<Material>> importedMaterials;
-    importedMaterials.reserve(importedModel.Materials.size());
-    for (const ImportedMaterial& info : importedModel.Materials)
+    importedMaterials.reserve(importedModel->Materials.size());
+    for (const ImportedMaterial& info : importedModel->Materials)
     {
         std::shared_ptr<Texture2D> importedTexture = nullptr;
         if (!info.TexturePath.empty())
@@ -262,14 +261,16 @@ void Application::Run()
         importedMaterials.push_back(std::move(importedMaterial));
     }
 
-    Model characterModel = importer.Load(AssetPath("Models/2B nier automata.obj").string().c_str());
-    Logger::Info("Model loaded: " + characterModel.Name + " meshes=" +
-                 std::to_string(characterModel.Meshes.size()) +
-                 " materials=" + std::to_string(characterModel.Materials.size()));
+    auto characterModel = std::make_shared<const Model>(
+        importer.Load(AssetPath("Models/2B nier automata.obj").string().c_str())
+    );
+    Logger::Info("Model loaded: " + characterModel->Name + " meshes=" +
+                 std::to_string(characterModel->Meshes.size()) +
+                 " materials=" + std::to_string(characterModel->Materials.size()));
 
     std::vector<std::shared_ptr<Material>> characterMaterials;
-    characterMaterials.reserve(characterModel.Materials.size());
-    for (const ImportedMaterial& info : characterModel.Materials)
+    characterMaterials.reserve(characterModel->Materials.size());
+    for (const ImportedMaterial& info : characterModel->Materials)
     {
         std::shared_ptr<Texture2D> characterTexture = nullptr;
         if (!info.TexturePath.empty())
@@ -282,10 +283,22 @@ void Application::Run()
         characterMaterials.push_back(std::move(characterMaterial));
     }
 
-    Transform characterTransform;
-    characterTransform.SetPosition(glm::vec3(0.0f, 0.0f, -4.0f));
-    characterTransform.SetRotationEulerDegrees(glm::vec3(-10.0f, 25.0f, 0.0f));
-    characterTransform.SetScale(glm::vec3(2.2f, 2.2f, 2.2f));
+    auto& materialInstLeft = scene.AddGameObject("MaterialInst_Left");
+    materialInstLeft.GetTransform().SetPosition(glm::vec3(-2.5f, 0.4f, -3.0f));
+    materialInstLeft.GetTransform().SetScale(glm::vec3(0.9f, 0.9f, 0.9f));
+
+    auto& materialInstRight = scene.AddGameObject("MaterialInst_Right");
+    materialInstRight.GetTransform().SetPosition(glm::vec3(2.5f, 0.4f, -3.0f));
+    materialInstRight.GetTransform().SetScale(glm::vec3(0.9f, 0.9f, 0.9f));
+
+    auto& characterInst = scene.AddGameObject("CharacterInst");
+    characterInst.GetTransform().SetPosition(glm::vec3(0.0f, 0.0f, -4.0f));
+    characterInst.GetTransform().SetRotationEulerDegrees(glm::vec3(-10.0f, 25.0f, 0.0f));
+    characterInst.GetTransform().SetScale(glm::vec3(2.2f, 2.2f, 2.2f));
+
+    ModelRenderer materialRendererA(importedModel, importedMaterials);
+    ModelRenderer materialRendererB(importedModel, importedMaterials);
+    ModelRenderer characterRenderer(characterModel, characterMaterials);
 
     Input input(window.GetHandle());
     CameraController cameraController(camera, input, window);
@@ -322,30 +335,18 @@ void Application::Run()
         shader->SetMat4("u_ViewProjection", viewProjection);
         shader->SetMat4("u_Model", glm::mat4(1.0f));
         renderer.Draw(mesh, materialTriangle);
-        for (const auto& object : scene.GetGameObjects())
+
+        for (const GameObject* object : { &cubeLeft, &cubeRight })
         {
-            const Material& material =
-                (object->GetName() == "Cube_Left") ? materialLeft : materialRight;
+            const Material& material = (object == &cubeLeft) ? materialLeft : materialRight;
 
             shader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
             renderer.Draw(cube, material);
         }
 
-        shader->SetMat4("u_Model", importedTransform.GetModelMatrix());
-        for (const ModelMesh& importedMesh : importedModel.Meshes)
-        {
-            const std::size_t materialIndex =
-                std::min(importedMesh.MaterialIndex, importedMaterials.size() - 1);
-            renderer.Draw(*importedMesh.Mesh, *importedMaterials[materialIndex]);
-        }
-
-        shader->SetMat4("u_Model", characterTransform.GetModelMatrix());
-        for (const ModelMesh& characterMesh : characterModel.Meshes)
-        {
-            const std::size_t materialIndex =
-                std::min(characterMesh.MaterialIndex, characterMaterials.size() - 1);
-            renderer.Draw(*characterMesh.Mesh, *characterMaterials[materialIndex]);
-        }
+        materialRendererA.Draw(scene.GetWorldMatrix(materialInstLeft), renderer);
+        materialRendererB.Draw(scene.GetWorldMatrix(materialInstRight), renderer);
+        characterRenderer.Draw(scene.GetWorldMatrix(characterInst), renderer);
 
         window.SwapBuffers();
     }

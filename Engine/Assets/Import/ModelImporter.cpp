@@ -12,9 +12,11 @@
 
 #include <cmath>
 #include <filesystem>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace
 {
@@ -84,20 +86,12 @@ namespace
         return result;
     }
 
-    std::shared_ptr<Mesh> ConvertMesh(
-        const aiMesh* mesh,
-        const glm::mat4& transform
-    )
+    std::shared_ptr<Mesh> ConvertMesh(const aiMesh* mesh)
     {
         if (mesh == nullptr || !mesh->HasPositions() || mesh->mNumVertices == 0)
         {
             return nullptr;
         }
-
-        const glm::mat3 transform3(transform);
-        const float determinant = glm::determinant(transform3);
-        const glm::mat3 normalMatrix =
-            std::fabs(determinant) > 1e-6f ? glm::transpose(glm::inverse(transform3)) : glm::mat3(1.0f);
 
         bool valid = true;
         std::vector<Mesh::Vertex> vertices;
@@ -106,7 +100,7 @@ namespace
         for (unsigned int i = 0; i < mesh->mNumVertices; i++)
         {
             const aiVector3D& source = mesh->mVertices[i];
-            const glm::vec3 position = glm::vec3(transform * glm::vec4(source.x, source.y, source.z, 1.0f));
+            const glm::vec3 position(source.x, source.y, source.z);
 
             if (!IsFinite(position))
             {
@@ -119,7 +113,7 @@ namespace
                 mesh->HasNormals() ? mesh->mNormals[i].y : 0.0f,
                 mesh->HasNormals() ? mesh->mNormals[i].z : 1.0f
             );
-            normal = glm::normalize(normalMatrix * normal);
+            normal = glm::normalize(normal);
             if (!IsFinite(normal))
             {
                 normal = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -167,8 +161,8 @@ namespace
             }
 
             indices.push_back(a);
-            indices.push_back(determinant < 0.0f ? c : b);
-            indices.push_back(determinant < 0.0f ? b : c);
+            indices.push_back(b);
+            indices.push_back(c);
         }
 
         if (indices.empty())
@@ -179,40 +173,57 @@ namespace
         return std::make_shared<Mesh>(vertices, indices);
     }
 
-    void TraverseNode(
+    ModelNode TraverseNode(
         const aiNode* node,
         const aiScene* scene,
-        const glm::mat4& parentTransform,
-        Model& model
+        Model& model,
+        std::vector<std::size_t>& meshMap
     )
     {
-        if (node == nullptr) return;
+        ModelNode result;
 
-        const glm::mat4 transform = parentTransform * ToGLM(node->mTransformation);
+        if (node == nullptr) return result;
+
+        if (node->mName.length > 0)
+        {
+            result.Name = node->mName.C_Str();
+        }
+
+        result.LocalTransform = ToGLM(node->mTransformation);
 
         for (unsigned int i = 0; i < node->mNumMeshes; i++)
         {
-            const unsigned int meshIndex = node->mMeshes[i];
-            if (meshIndex >= scene->mNumMeshes) continue;
+            const unsigned int sourceIndex = node->mMeshes[i];
+            if (sourceIndex >= scene->mNumMeshes) continue;
 
-            std::shared_ptr<Mesh> mesh = ConvertMesh(scene->mMeshes[meshIndex], transform);
-            if (mesh)
+            std::size_t modelIndex = meshMap[sourceIndex];
+            if (modelIndex == std::numeric_limits<std::size_t>::max())
             {
-                std::size_t materialIndex = scene->mMeshes[meshIndex]->mMaterialIndex;
+                std::shared_ptr<Mesh> mesh = ConvertMesh(scene->mMeshes[sourceIndex]);
+                if (!mesh) continue;
+
+                std::size_t materialIndex = scene->mMeshes[sourceIndex]->mMaterialIndex;
                 if (materialIndex >= model.Materials.size())
                 {
                     Logger::Warning("ModelImporter: invalid material index, using first material");
                     materialIndex = 0;
                 }
 
+                modelIndex = model.Meshes.size();
                 model.Meshes.push_back(ModelMesh{std::move(mesh), materialIndex});
+                meshMap[sourceIndex] = modelIndex;
             }
+
+            result.MeshIndices.push_back(modelIndex);
         }
 
+        result.Children.reserve(node->mNumChildren);
         for (unsigned int i = 0; i < node->mNumChildren; i++)
         {
-            TraverseNode(node->mChildren[i], scene, transform, model);
+            result.Children.push_back(TraverseNode(node->mChildren[i], scene, model, meshMap));
         }
+
+        return result;
     }
 }
 
@@ -251,7 +262,11 @@ Model ModelImporter::Load(const std::filesystem::path& path)
         model.Materials.push_back(ImportedMaterial{});
     }
 
-    TraverseNode(scene->mRootNode, scene, glm::mat4(1.0f), model);
+    std::vector<std::size_t> meshMap(
+        scene->mNumMeshes,
+        std::numeric_limits<std::size_t>::max()
+    );
+    model.RootNode = TraverseNode(scene->mRootNode, scene, model, meshMap);
 
     if (model.Meshes.empty())
     {

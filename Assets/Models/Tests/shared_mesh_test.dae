@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset><unit name="meter" meter="1"/></asset>
+  <library_geometries>
+    <geometry id="shared" name="SharedTriangle">
+      <mesh>
+        <source id="shared-positions">
+          <float_array id="shared-positions-array" count="9">-0.5 -0.5 0 0.5 -0.5 0 0 0.5 0</float_array>
+          <technique_common>
+            <accessor source="#shared-positions-array" count="3" stride="3">
+              <param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="shared-vertices"><input semantic="POSITION" source="#shared-positions"/></vertices>
+        <triangles count="1">
+          <input semantic="VERTEX" source="#shared-vertices" offset="0"/>
+          <p>0 1 2</p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="scene">
+      <node id="left" name="Node_Left"><translate>-2 0 0</translate><instance_geometry url="#shared"/></node>
+      <node id="right" name="Node_Right"><translate>2 0 0</translate><instance_geometry url="#shared"/></node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene><instance_visual_scene url="#scene"/></scene>
+</COLLADA>

@@ -2,6 +2,7 @@
 
 #include "Renderer/OpenGL/Mesh.hpp"
 
+#include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
 #include <filesystem>
@@ -23,11 +24,20 @@ struct ModelMesh
     std::size_t MaterialIndex = 0;
 };
 
+struct ModelNode
+{
+    std::string Name;
+    glm::mat4 LocalTransform{1.0f};
+    std::vector<std::size_t> MeshIndices;
+    std::vector<ModelNode> Children;
+};
+
 struct Model
 {
     std::string Name;
     std::vector<ModelMesh> Meshes;
     std::vector<ImportedMaterial> Materials;
+    ModelNode RootNode;
 };
 
 class ModelImporter

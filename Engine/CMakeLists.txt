@@ -27,6 +27,7 @@ add_library(Engine STATIC
     Renderer/OpenGL/IndexBuffer.cpp
     Renderer/OpenGL/Material.cpp
     Renderer/OpenGL/Mesh.cpp
+    Renderer/OpenGL/ModelRenderer.cpp
     Renderer/OpenGL/Renderer.cpp
     Renderer/OpenGL/Shader.cpp
     Renderer/OpenGL/Texture2D.cpp

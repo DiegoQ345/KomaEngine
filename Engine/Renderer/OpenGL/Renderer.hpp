@@ -12,4 +12,5 @@ public:
     void Clear() const;
     void Draw(const Mesh& mesh) const;
     void Draw(const Mesh& mesh, const Material& material) const;
+    void SetFrontFaceWinding(bool clockwise) const;
 };
