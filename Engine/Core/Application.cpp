@@ -334,6 +334,8 @@ void Application::Run()
 
         shader->Bind();
         shader->SetMat4("u_ViewProjection", viewProjection);
+        shader->SetVec3("u_CameraPosition", camera.GetPosition());
+        shader->SetVec3("u_LightDirection", glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f)));
         shader->SetMat4("u_Model", glm::mat4(1.0f));
         renderer.Draw(mesh, materialTriangle);
 
