@@ -47,3 +47,6 @@ compile_commands.json
 
 # Documento de especificacion (local)
 prompt.md
+
+# Modelo externo de gran tamano (no versionar)
+Assets/Models/Yanagi/
