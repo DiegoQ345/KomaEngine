@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string>
@@ -236,17 +237,55 @@ void Application::Run()
     cubeRight.GetTransform().SetScale(glm::vec3(0.7f, 0.7f, 0.7f));
 
     ModelImporter importer;
-    Model importedModel = importer.Load(AssetPath("Models/textured_mesh.obj").string().c_str());
+    Model importedModel = importer.Load(AssetPath("Models/Tests/material_test.obj").string().c_str());
     Logger::Info("Model loaded: " + importedModel.Name + " meshes=" +
-                 std::to_string(importedModel.Meshes.size()));
+                 std::to_string(importedModel.Meshes.size()) +
+                 " materials=" + std::to_string(importedModel.Materials.size()));
 
     Transform importedTransform;
     importedTransform.SetPosition(glm::vec3(0.0f, 0.4f, -2.5f));
     importedTransform.SetRotationEulerDegrees(glm::vec3(-25.0f, 35.0f, 0.0f));
     importedTransform.SetScale(glm::vec3(1.6f, 1.6f, 1.6f));
 
-    Material materialModel(shader, texture);
-    materialModel.SetBaseColor(glm::vec3(0.8f, 0.8f, 0.8f));
+    std::vector<std::shared_ptr<Material>> importedMaterials;
+    importedMaterials.reserve(importedModel.Materials.size());
+    for (const ImportedMaterial& info : importedModel.Materials)
+    {
+        std::shared_ptr<Texture2D> importedTexture = nullptr;
+        if (!info.TexturePath.empty())
+        {
+            importedTexture = assets.LoadTexture2D(info.TexturePath);
+        }
+
+        auto importedMaterial = std::make_shared<Material>(shader, importedTexture);
+        importedMaterial->SetBaseColor(info.DiffuseColor);
+        importedMaterials.push_back(std::move(importedMaterial));
+    }
+
+    Model characterModel = importer.Load(AssetPath("Models/2B nier automata.obj").string().c_str());
+    Logger::Info("Model loaded: " + characterModel.Name + " meshes=" +
+                 std::to_string(characterModel.Meshes.size()) +
+                 " materials=" + std::to_string(characterModel.Materials.size()));
+
+    std::vector<std::shared_ptr<Material>> characterMaterials;
+    characterMaterials.reserve(characterModel.Materials.size());
+    for (const ImportedMaterial& info : characterModel.Materials)
+    {
+        std::shared_ptr<Texture2D> characterTexture = nullptr;
+        if (!info.TexturePath.empty())
+        {
+            characterTexture = assets.LoadTexture2D(info.TexturePath);
+        }
+
+        auto characterMaterial = std::make_shared<Material>(shader, characterTexture);
+        characterMaterial->SetBaseColor(info.DiffuseColor);
+        characterMaterials.push_back(std::move(characterMaterial));
+    }
+
+    Transform characterTransform;
+    characterTransform.SetPosition(glm::vec3(0.0f, 0.0f, -4.0f));
+    characterTransform.SetRotationEulerDegrees(glm::vec3(-10.0f, 25.0f, 0.0f));
+    characterTransform.SetScale(glm::vec3(2.2f, 2.2f, 2.2f));
 
     Input input(window.GetHandle());
     CameraController cameraController(camera, input, window);
@@ -293,9 +332,19 @@ void Application::Run()
         }
 
         shader->SetMat4("u_Model", importedTransform.GetModelMatrix());
-        for (const auto& importedMesh : importedModel.Meshes)
+        for (const ModelMesh& importedMesh : importedModel.Meshes)
         {
-            renderer.Draw(*importedMesh, materialModel);
+            const std::size_t materialIndex =
+                std::min(importedMesh.MaterialIndex, importedMaterials.size() - 1);
+            renderer.Draw(*importedMesh.Mesh, *importedMaterials[materialIndex]);
+        }
+
+        shader->SetMat4("u_Model", characterTransform.GetModelMatrix());
+        for (const ModelMesh& characterMesh : characterModel.Meshes)
+        {
+            const std::size_t materialIndex =
+                std::min(characterMesh.MaterialIndex, characterMaterials.size() - 1);
+            renderer.Draw(*characterMesh.Mesh, *characterMaterials[materialIndex]);
         }
 
         window.SwapBuffers();

@@ -3,6 +3,7 @@
 #include "Core/Logger.hpp"
 
 #include <assimp/Importer.hpp>
+#include <assimp/material.h>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 
@@ -25,6 +26,62 @@ namespace
     bool IsFinite(const glm::vec3& value)
     {
         return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
+    }
+
+    ImportedMaterial ConvertMaterial(
+        const aiMaterial* material,
+        const std::filesystem::path& modelDirectory
+    )
+    {
+        ImportedMaterial result;
+
+        aiString name;
+        if (material->Get(AI_MATKEY_NAME, name) == AI_SUCCESS)
+        {
+            result.Name = name.C_Str();
+        }
+
+        aiColor3D diffuse;
+        if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS)
+        {
+            result.DiffuseColor = glm::vec3(diffuse.r, diffuse.g, diffuse.b);
+        }
+
+        aiString texturePath;
+        const unsigned int count = material->GetTextureCount(aiTextureType_DIFFUSE);
+        if (count > 0 && material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
+        {
+            const std::string raw = texturePath.C_Str();
+
+            if (!raw.empty() && raw[0] == '*')
+            {
+                Logger::Warning("ModelImporter: embedded diffuse textures are not supported: " + result.Name);
+            }
+            else if (!raw.empty())
+            {
+                std::filesystem::path path(raw);
+                path.make_preferred();
+
+                if (!path.is_absolute())
+                {
+                    path = modelDirectory / path;
+                }
+
+                std::error_code error;
+                const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, error);
+
+                if (!error && std::filesystem::exists(canonical))
+                {
+                    result.TexturePath = canonical;
+                }
+                else
+                {
+                    Logger::Warning("ModelImporter: diffuse texture not found: " + path.string());
+                }
+            }
+        }
+
+        return result;
     }
 
     std::shared_ptr<Mesh> ConvertMesh(
@@ -141,7 +198,14 @@ namespace
             std::shared_ptr<Mesh> mesh = ConvertMesh(scene->mMeshes[meshIndex], transform);
             if (mesh)
             {
-                model.Meshes.push_back(std::move(mesh));
+                std::size_t materialIndex = scene->mMeshes[meshIndex]->mMaterialIndex;
+                if (materialIndex >= model.Materials.size())
+                {
+                    Logger::Warning("ModelImporter: invalid material index, using first material");
+                    materialIndex = 0;
+                }
+
+                model.Meshes.push_back(ModelMesh{std::move(mesh), materialIndex});
             }
         }
 
@@ -173,6 +237,19 @@ Model ModelImporter::Load(const std::filesystem::path& path)
 
     Model model;
     model.Name = path.stem().string();
+
+    const std::filesystem::path modelDirectory = std::filesystem::weakly_canonical(path).parent_path();
+
+    model.Materials.reserve(scene->mNumMaterials);
+    for (unsigned int i = 0; i < scene->mNumMaterials; i++)
+    {
+        model.Materials.push_back(ConvertMaterial(scene->mMaterials[i], modelDirectory));
+    }
+
+    if (model.Materials.empty())
+    {
+        model.Materials.push_back(ImportedMaterial{});
+    }
 
     TraverseNode(scene->mRootNode, scene, glm::mat4(1.0f), model);
 

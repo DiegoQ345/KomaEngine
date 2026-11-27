@@ -1,0 +1,61 @@
+# Prueba de materiales importados: dos piezas, dos materiales
+mtllib material_test.mtl
+
+o Part_Red
+usemtl Material_Red
+v -1.5 -0.5 -0.5
+v -0.5 -0.5 -0.5
+v -0.5  0.5 -0.5
+v -1.5  0.5 -0.5
+v -1.5 -0.5  0.5
+v -0.5 -0.5  0.5
+v -0.5  0.5  0.5
+v -1.5  0.5  0.5
+f 1 4 3 2
+f 5 6 7 8
+f 1 5 8 4
+f 2 3 7 6
+f 1 2 6 5
+f 4 8 7 3
+
+o Part_Textured
+usemtl Material_Textured
+v 0.5 -0.5 -0.5
+v 1.5 -0.5 -0.5
+v 1.5  0.5 -0.5
+v 0.5  0.5 -0.5
+v 0.5 -0.5  0.5
+v 1.5 -0.5  0.5
+v 1.5  0.5  0.5
+v 0.5  0.5  0.5
+# UV por cara (0..1), 4 por cara, para evitar compartir UV entre caras
+vt 0 0
+vt 0 1
+vt 1 1
+vt 1 0
+vt 0 0
+vt 0 1
+vt 1 1
+vt 1 0
+vt 0 0
+vt 0 1
+vt 1 1
+vt 1 0
+vt 0 0
+vt 0 1
+vt 1 1
+vt 1 0
+vt 0 0
+vt 0 1
+vt 1 1
+vt 1 0
+vt 0 0
+vt 0 1
+vt 1 1
+vt 1 0
+f 9/1 12/2 11/3 10/4
+f 13/5 14/6 15/7 16/8
+f 9/9 13/10 16/11 12/12
+f 10/13 11/14 15/15 14/16
+f 9/17 10/18 14/19 13/20
+f 12/21 16/22 15/23 11/24
