@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Assets/Skeleton.hpp"
 #include "Renderer/OpenGL/Mesh.hpp"
 
 #include <glm/mat4x4.hpp>
@@ -27,6 +28,12 @@ struct ModelMesh
 {
     std::shared_ptr<Mesh> Mesh;
     std::size_t MaterialIndex = 0;
+    /// Per aiMesh bone list in skin order; empty if not skinned.
+    /// Inverse bind matrices come from aiBone::mOffsetMatrix (converted via ToGLM), stored per mesh.
+    std::vector<KomaEngine::BoneBinding> BoneBindings;
+    /// Per-vertex skin influences aligned with Mesh vertices (index v == aiMesh vertex index).
+    /// Empty if the mesh has no skin data imported.
+    std::vector<std::vector<KomaEngine::SkinVertexInfluence>> SkinWeights;
 };
 
 struct ModelNode
@@ -43,6 +50,10 @@ struct Model
     std::vector<ModelMesh> Meshes;
     std::vector<ImportedMaterial> Materials;
     ModelNode RootNode;
+    /// Flat list of all ModelNode instances in traversal order (index = stable node id for bones).
+    std::vector<std::shared_ptr<ModelNode>> NodeTable;
+    /// Optional; null when the model has no skeleton.
+    std::shared_ptr<KomaEngine::Skeleton> SkeletonData;
 };
 
 class ModelImporter

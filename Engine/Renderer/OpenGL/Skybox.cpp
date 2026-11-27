@@ -2,6 +2,7 @@
 
 #include "Core/Camera.hpp"
 #include "Core/Logger.hpp"
+#include "Renderer/OpenGL/Renderer.hpp"
 #include "Renderer/OpenGL/Shader.hpp"
 
 #include <glm/glm.hpp>
@@ -91,6 +92,7 @@ void Skybox::Draw(const Camera& camera, Renderer& renderer, float elapsedTime) c
     glBindVertexArray(m_VAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
+    renderer.AddDrawCall(1);
 
     glFrontFace(previousFrontFace);
     glCullFace(previousCullFace);

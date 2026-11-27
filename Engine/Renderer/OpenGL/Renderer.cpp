@@ -27,15 +27,32 @@ void Renderer::Clear() const
 void Renderer::Draw(const Mesh& mesh) const
 {
     mesh.Draw();
+    ++const_cast<Renderer*>(this)->m_DrawCallsThisFrame;
 }
 
 void Renderer::Draw(const Mesh& mesh, const Material& material) const
 {
     material.Bind();
     mesh.Draw();
+    ++const_cast<Renderer*>(this)->m_DrawCallsThisFrame;
 }
 
 void Renderer::SetFrontFaceWinding(bool clockwise) const
 {
     glFrontFace(clockwise ? GL_CW : GL_CCW);
+}
+
+void Renderer::BeginFrameStats()
+{
+    m_DrawCallsThisFrame = 0;
+}
+
+void Renderer::AddDrawCall(uint32_t count)
+{
+    m_DrawCallsThisFrame += count;
+}
+
+uint32_t Renderer::GetDrawCalls() const
+{
+    return m_DrawCallsThisFrame;
 }

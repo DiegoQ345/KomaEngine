@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -349,10 +350,49 @@ void Application::Run()
     Input input(window.GetHandle());
     CameraController cameraController(camera, input, window);
 
+    // Benchmark mode (06-052): configurable, reproducible
+    static constexpr bool kBenchmarkMode = false;
+    static constexpr uint32_t kBenchmarkObjectCount = 100u;
+
+    std::vector<glm::mat4> benchmarkModels;
+    Material benchmarkMaterial(shader, nullptr);
+    if (kBenchmarkMode)
+    {
+        camera.SetPosition(glm::vec3(0.0f, 6.0f, 10.0f));
+        camera.SetRotationEulerDegrees(glm::vec3(-20.0f, 0.0f, 0.0f));
+        window.SetCursorCaptured(false);
+        benchmarkMaterial.SetBaseColor(glm::vec3(0.8f, 0.8f, 0.8f));
+        benchmarkMaterial.SetMetallic(0.0f);
+        benchmarkMaterial.SetRoughness(0.5f);
+        benchmarkMaterial.SetUsePBR(false);
+        benchmarkMaterial.SetUseNormalMap(false);
+        benchmarkMaterial.SetUnlitTest(false);
+        const uint32_t cols = static_cast<uint32_t>(std::ceil(std::sqrt(static_cast<float>(kBenchmarkObjectCount))));
+        const float spacing = 1.6f;
+        benchmarkModels.reserve(kBenchmarkObjectCount);
+        for (uint32_t i = 0; i < kBenchmarkObjectCount; ++i)
+        {
+            const uint32_t ix = i % cols;
+            const uint32_t iz = i / cols;
+            const float x = (static_cast<float>(ix) - static_cast<float>(cols) * 0.5f) * spacing + spacing * 0.5f;
+            const float z = -6.0f - static_cast<float>(iz) * spacing;
+            glm::mat4 m = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0.0f, z));
+            m = glm::scale(m, glm::vec3(0.6f));
+            benchmarkModels.push_back(m);
+        }
+    }
+
     auto last = std::chrono::steady_clock::now();
+    using clock = std::chrono::steady_clock;
+    double benchAccumFrameMs = 0.0;
+    double benchAccumCpuRenderMs = 0.0;
+    uint64_t benchAccumFrames = 0;
+    uint64_t benchAccumDrawCalls = 0;
+    auto benchReportStart = clock::now();
 
     while (!window.ShouldClose())
     {
+        const auto frameStartTp = clock::now();
         window.PollEvents();
 
         const auto now = std::chrono::steady_clock::now();
@@ -361,7 +401,10 @@ void Application::Run()
         last = now;
 
         input.Update();
-        cameraController.Update(deltaTime);
+        if (!kBenchmarkMode)
+        {
+            cameraController.Update(deltaTime);
+        }
 
         updateViewport();
 
@@ -372,6 +415,7 @@ void Application::Run()
 
         Update(deltaTime);
 
+        const auto renderStartTp = clock::now();
         const glm::vec3 lightDirection = glm::normalize(glm::vec3(0.5f, 1.0f, 0.3f));
         const glm::mat4 lightView = glm::lookAt(
             lightDirection * 10.0f,
@@ -381,21 +425,33 @@ void Application::Run()
         const glm::mat4 lightProjection = glm::ortho(-6.0f, 6.0f, -6.0f, 6.0f, 0.1f, 30.0f);
         shadowMap.SetLightSpaceMatrix(lightProjection * lightView);
 
+        renderer.BeginFrameStats();
         shadowMap.Begin();
         depthShader->Bind();
         depthShader->SetMat4("u_LightViewProjection", shadowMap.GetLightSpaceMatrix());
 
-        depthShader->SetMat4("u_Model", glm::mat4(1.0f));
-        renderer.Draw(mesh);
-        renderer.Draw(groundMesh);
-        for (const GameObject* object : { &cubeLeft, &cubeRight })
+        if (kBenchmarkMode)
         {
-            depthShader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
-            renderer.Draw(cube);
+            for (const glm::mat4& bm : benchmarkModels)
+            {
+                depthShader->SetMat4("u_Model", bm);
+                renderer.Draw(cube);
+            }
         }
-        materialRendererA.DrawDepth(scene.GetWorldMatrix(materialInstLeft), *depthShader, renderer);
-        materialRendererB.DrawDepth(scene.GetWorldMatrix(materialInstRight), *depthShader, renderer);
-        characterRenderer.DrawDepth(scene.GetWorldMatrix(characterInst), *depthShader, renderer);
+        else
+        {
+            depthShader->SetMat4("u_Model", glm::mat4(1.0f));
+            renderer.Draw(mesh);
+            renderer.Draw(groundMesh);
+            for (const GameObject* object : { &cubeLeft, &cubeRight })
+            {
+                depthShader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
+                renderer.Draw(cube);
+            }
+            materialRendererA.DrawDepth(scene.GetWorldMatrix(materialInstLeft), *depthShader, renderer);
+            materialRendererB.DrawDepth(scene.GetWorldMatrix(materialInstRight), *depthShader, renderer);
+            characterRenderer.DrawDepth(scene.GetWorldMatrix(characterInst), *depthShader, renderer);
+        }
         shadowMap.End();
 
         shader->Bind();
@@ -430,24 +486,60 @@ void Application::Run()
             shader->SetVec3(colorName.c_str(), pointLights[i].Color);
         }
 
-        shader->SetMat4("u_Model", glm::mat4(1.0f));
-        renderer.Draw(groundMesh, groundMaterial);
-        renderer.Draw(mesh, materialTriangle);
-
-        for (const GameObject* object : { &cubeLeft, &cubeRight })
+        if (kBenchmarkMode)
         {
-            const Material& material = (object == &cubeLeft) ? materialLeft : materialRight;
-            shader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
-            renderer.Draw(cube, material);
+            for (const glm::mat4& bm : benchmarkModels)
+            {
+                shader->SetMat4("u_Model", bm);
+                renderer.Draw(cube, benchmarkMaterial);
+            }
+        }
+        else
+        {
+            shader->SetMat4("u_Model", glm::mat4(1.0f));
+            renderer.Draw(groundMesh, groundMaterial);
+            renderer.Draw(mesh, materialTriangle);
+            for (const GameObject* object : { &cubeLeft, &cubeRight })
+            {
+                const Material& material = (object == &cubeLeft) ? materialLeft : materialRight;
+                shader->SetMat4("u_Model", scene.GetWorldMatrix(*object));
+                renderer.Draw(cube, material);
+            }
+            materialRendererA.Draw(scene.GetWorldMatrix(materialInstLeft), renderer);
+            materialRendererB.Draw(scene.GetWorldMatrix(materialInstRight), renderer);
+            characterRenderer.Draw(scene.GetWorldMatrix(characterInst), renderer);
         }
 
-        materialRendererA.Draw(scene.GetWorldMatrix(materialInstLeft), renderer);
-        materialRendererB.Draw(scene.GetWorldMatrix(materialInstRight), renderer);
-        characterRenderer.Draw(scene.GetWorldMatrix(characterInst), renderer);
-
         skybox.Draw(camera, renderer, m_Time);
+        const auto renderEndTp = clock::now();
 
         window.SwapBuffers();
+        const auto frameEndTp = clock::now();
+
+        const double frameMs = std::chrono::duration<double, std::milli>(frameEndTp - frameStartTp).count();
+        const double cpuRenderMs = std::chrono::duration<double, std::milli>(renderEndTp - renderStartTp).count();
+        benchAccumFrameMs += frameMs;
+        benchAccumCpuRenderMs += cpuRenderMs;
+        benchAccumFrames += 1;
+        benchAccumDrawCalls += static_cast<uint64_t>(renderer.GetDrawCalls());
+
+        const double reportElapsedSec = std::chrono::duration<double>(frameEndTp - benchReportStart).count();
+        if (reportElapsedSec >= 1.0 && benchAccumFrames > 0)
+        {
+            const double avgFrameMs = benchAccumFrameMs / static_cast<double>(benchAccumFrames);
+            const double avgCpuRenderMs = benchAccumCpuRenderMs / static_cast<double>(benchAccumFrames);
+            const double avgFps = (avgFrameMs > 0.0) ? (1000.0 / avgFrameMs) : 0.0;
+            const double avgDrawCalls = static_cast<double>(benchAccumDrawCalls) / static_cast<double>(benchAccumFrames);
+            Logger::Info("[Benchmark] avgFPS=" + std::to_string(avgFps) +
+                         " frameMs=" + std::to_string(avgFrameMs) +
+                         " cpuRenderMs=" + std::to_string(avgCpuRenderMs) +
+                         " drawCalls=" + std::to_string(avgDrawCalls));
+            benchAccumFrameMs = 0.0;
+            benchAccumCpuRenderMs = 0.0;
+            benchAccumFrames = 0;
+            benchAccumDrawCalls = 0;
+            benchReportStart = frameEndTp;
+        }
     }
 }
 
